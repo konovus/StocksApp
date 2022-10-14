@@ -1,0 +1,62 @@
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <!-- Base application theme. -->
+    <style name="Theme.ApiTesting" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+        <!-- Primary brand color. -->
+        <item name="colorPrimary">@color/purple_200</item>
+        <item name="colorPrimaryVariant">@color/purple_700</item>
+        <item name="colorOnPrimary">@color/black</item>
+        <!-- Secondary brand color. -->
+        <item name="colorSecondary">@color/teal_200</item>
+        <item name="colorSecondaryVariant">@color/teal_200</item>
+        <item name="colorOnSecondary">@color/black</item>
+        <!-- Status bar color. -->
+        <item name="android:statusBarColor" >@color/dark_blue</item>
+        <!-- Customize your theme here. -->
+        <item name="bottomSheetDialogTheme">@style/AppBottomSheetDialogTheme</item>
+        <item name="actionBarStyle">@style/Custom.ActionBar</item>
+        <item name="android:textColorSecondary">@color/gray</item>
+        <item name="tabStyle">@style/Widget.App.TabLayout</item>
+    </style>
+
+    <style name="Widget.App.TabLayout" parent="Widget.MaterialComponents.TabLayout">
+        <item name="materialThemeOverlay">@style/ThemeOverlay.App.TabLayout</item>
+    </style>
+
+    <style name="ThemeOverlay.App.TabLayout" parent="">
+        <item name="colorPrimary">@color/gray</item>
+        <item name="colorOnSurface">@color/gray_600</item>
+    </style>
+
+    <style name="Custom.ActionBar" parent="Widget.MaterialComponents.Light.ActionBar.Solid">
+        <item name="background">@color/dark_blue</item>
+    </style>
+
+    <style name="AppBottomSheetDialogTheme"
+        parent="Theme.MaterialComponents.DayNight.BottomSheetDialog">
+        <item name="bottomSheetStyle">@style/AppModalStyle</item>
+    </style>
+
+    <style name="AppModalStyle"
+        parent="Widget.Design.BottomSheet.Modal">
+        <item name="android:background">@drawable/bottom_sheet_shape</item>
+    </style>
+
+    <style name="ShapeAppearanceOverlay.MyApp.Button.Rounded" parent="">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSize">50%</item>
+        <item name="strokeColor">@color/gray</item>
+        <item name="strokeWidth">2dp</item>
+    </style>
+
+    <style name="ThemeOverlay.Custom.Button" parent="">
+        <item name="colorSecondary">@color/dark_gray</item>
+    </style>
+
+    <style name="LoginTextInputLayoutStyle" parent="Widget.MaterialComponents.TextInputLayout.OutlinedBox.Dense">
+        <item name="boxStrokeColor">@color/gray</item>
+        <item name="boxStrokeWidth">2dp</item>
+        <item name="hintTextColor">@color/gray_bbb</item>
+        <item name="android:textCursorDrawable">@null</item>
+    </style>
+
+</resources>

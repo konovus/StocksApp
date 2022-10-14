@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <data>
+        <import
+            alias="ExtFun"
+            type="com.konovus.apitesting.util.ViewExtKt"/>
+        <variable
+            name="quote"
+            type="com.konovus.apitesting.data.remote.responses.QuoteResponse.GlobalQuote" />
+    </data>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:paddingTop="5dp"
+        android:paddingHorizontal="15dp"
+        app:layout_constraintTop_toBottomOf="@id/tab_layout">
+
+        <include
+            layout="@layout/statistics_item"
+            app:labelText="@{`Open`}"
+            app:value="@{ExtFun.toNDecimals(quote.open, 2)}" />
+
+        <include
+            layout="@layout/statistics_item"
+            app:labelText="@{`Previous close`}"
+            app:value="@{ExtFun.toNDecimals(quote.previousClose, 2)}" />
+
+        <include
+            layout="@layout/statistics_item"
+            app:labelText="@{`High`}"
+            app:value="@{ExtFun.toNDecimals(quote.high, 2)}" />
+
+        <include
+            layout="@layout/statistics_item"
+            app:labelText="@{`Low`}"
+            app:value="@{ExtFun.toNDecimals(quote.low, 2)}" />
+
+        <include
+            layout="@layout/statistics_item"
+            app:labelText="@{`Volume`}"
+            app:value="@{ExtFun.withSuffix(quote.volume)}" />
+
+    </LinearLayout>
+</layout>

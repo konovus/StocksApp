@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<androidx.cardview.widget.CardView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_height="wrap_content"
+    android:layout_width="match_parent"
+    app:cardCornerRadius="5dp"
+    android:layout_marginTop="10dp"
+    android:backgroundTint="@color/dark_blue">
+
+<androidx.constraintlayout.widget.ConstraintLayout
+    android:id="@+id/wrapper_stock_item"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginHorizontal="4dp"
+    android:layout_marginVertical="4dp"
+    android:paddingHorizontal="4dp"
+    android:paddingVertical="4dp">
+
+
+    <TextView
+        android:id="@+id/name_tv"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginEnd="50dp"
+        android:textSize="17sp"
+        android:textColor="@color/white"
+        android:ellipsize="end"
+        android:maxLines="1"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toStartOf="@id/amount_owned_tv"/>
+
+    <TextView
+        android:id="@+id/symbol_tv"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginEnd="50dp"
+        android:textSize="15sp"
+        android:textStyle="italic"
+        android:paddingVertical="8dp"
+        android:textColor="@color/gray"
+        android:textAlignment="viewStart"
+        tools:text="asads"
+        app:layout_constraintTop_toBottomOf="@id/name_tv"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toStartOf="@id/change_percent_tv"/>
+
+    <TextView
+        android:id="@+id/amount_owned_tv"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textSize="17sp"
+        android:textStyle="bold"
+        android:textColor="@color/gray"
+        app:layout_constraintTop_toTopOf="@id/name_tv"
+        app:layout_constraintBottom_toBottomOf="@id/name_tv"
+        app:layout_constraintEnd_toEndOf="parent"/>
+
+    <TextView
+        android:id="@+id/change_percent_tv"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textSize="15sp"
+        android:textColor="@color/gray"
+        app:layout_constraintTop_toTopOf="@id/symbol_tv"
+        app:layout_constraintBottom_toBottomOf="@id/symbol_tv"
+        app:layout_constraintEnd_toEndOf="parent"/>
+
+
+
+
+</androidx.constraintlayout.widget.ConstraintLayout>
+</androidx.cardview.widget.CardView>

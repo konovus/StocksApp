@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:background="@drawable/favorites_item_shape"
+    android:minWidth="170dp"
+    android:minHeight="170dp"
+    android:layout_marginStart="10dp">
+
+    <TextView
+        android:id="@+id/name"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:textSize="16sp"
+        android:fontFamily="@font/ubuntu_regular"
+        android:ellipsize="end"
+        android:maxLines="1"
+        android:padding="8dp"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"/>
+
+<!--    <ImageView-->
+<!--        android:id="@+id/favorite_iv"-->
+<!--        android:layout_width="wrap_content"-->
+<!--        android:layout_height="wrap_content"-->
+<!--        android:src="@drawable/ic_baseline_star_outline_24"-->
+<!--        android:padding="5dp"-->
+<!--        android:visibility="gone"-->
+<!--        app:layout_constraintTop_toTopOf="parent"-->
+<!--        app:layout_constraintEnd_toEndOf="parent"-->
+<!--        app:tint="@color/gray" />-->
+
+<!--    <com.github.mikephil.charting.charts.LineChart-->
+<!--        android:id="@+id/chart"-->
+<!--        android:layout_width="0dp"-->
+<!--        android:layout_height="150dp"-->
+<!--        android:layout_marginTop="20dp"-->
+<!--        android:visibility="gone"-->
+<!--        app:layout_constraintStart_toStartOf="parent"-->
+<!--        app:layout_constraintEnd_toEndOf="parent"-->
+<!--        app:layout_constraintTop_toBottomOf="@id/name"/>-->
+
+    <com.github.mikephil.charting.charts.LineChart
+        android:id="@+id/chart"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/name"
+        app:layout_constraintBottom_toTopOf="@id/price"/>
+
+    <TextView
+        android:id="@+id/symbol"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textSize="16sp"
+        android:textColor="@color/dark_gray"
+        android:fontFamily="@font/ubuntu_regular"
+        android:layout_marginTop="20dp"
+        android:padding="10dp"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"/>
+
+    <TextView
+        android:id="@+id/price"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textSize="16sp"
+        android:fontFamily="@font/ubuntu_bold"
+        android:padding="10dp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"/>
+
+
+</androidx.constraintlayout.widget.ConstraintLayout>

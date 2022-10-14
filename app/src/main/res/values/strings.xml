@@ -1,0 +1,18 @@
+<resources>
+    <string name="app_name">ApiTesting</string>
+    <string name="home">Home</string>
+    <string name="search">Search</string>
+    <string name="portfolio">Portfolio</string>
+    <string name="balance">Balance</string>
+    <string name="favorites">Favorites</string>
+    <string name="add_stocks_to_you_favorites">Add stocks to you favorites</string>
+    <string name="trending_stocks">Trending Stocks</string>
+    <string name="follow">Follow</string>
+    <string name="statistics_overview">Statistics Overview</string>
+    <string name="searchHint">Search...</string>
+    <string name="trade">Trade</string>
+    <string name="at">at</string>
+    <string name="tab_item_1">Statistics</string>
+    <string name="tab_item_2">Description</string>
+    <string name="tab_item_3">Transactions</string>
+</resources>

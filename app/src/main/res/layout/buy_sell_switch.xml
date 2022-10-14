@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<RadioGroup xmlns:android="http://schemas.android.com/apk/res/android"
+
+    android:id="@+id/toggle"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginHorizontal="30dp"
+    android:background="@drawable/buy_sell_switch_outline_shape"
+    android:checkedButton="@+id/buy_btn"
+    android:orientation="horizontal">
+
+    <RadioButton
+        android:id="@+id/sell_btn"
+        android:layout_width="0dp"
+        android:layout_height="match_parent"
+        android:layout_marginStart="2dp"
+        android:layout_marginVertical="2dp"
+        android:layout_weight="1"
+        android:background="@drawable/toggle_switch_background"
+        android:button="@null"
+        android:gravity="center"
+        android:text="Sell"
+        android:fontFamily="@font/ubuntu_medium"
+        android:textSize="18sp"
+        android:textColor="@color/gray" />
+
+    <RadioButton
+        android:id="@+id/buy_btn"
+        android:layout_width="0dp"
+        android:layout_height="match_parent"
+        android:layout_marginEnd="2dp"
+        android:layout_marginVertical="2dp"
+        android:layout_weight="1"
+        android:background="@drawable/toggle_switch_background"
+        android:button="@null"
+        android:gravity="center"
+        android:fontFamily="@font/ubuntu_medium"
+        android:textSize="18sp"
+        android:text="Buy"
+        android:textColor="@color/gray" />
+</RadioGroup>

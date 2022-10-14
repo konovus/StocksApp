@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/bottom_sheet_wrapper"
+    android:layout_width="match_parent"
+    android:background="@drawable/bottom_sheet_shape"
+    android:layout_height="wrap_content">
+
+    <TextView
+        android:id="@+id/symbol_tv"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="20dp"
+        android:layout_marginStart="30dp"
+        android:fontFamily="@font/ubuntu_medium"
+        android:textColor="@color/gray"
+        android:textSize="20sp"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        tools:text="AAPL" />
+
+    <TextView
+        android:id="@+id/price_tv"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="20dp"
+        android:layout_marginEnd="30dp"
+        android:fontFamily="@font/ubuntu_medium"
+        android:textColor="@color/gray"
+        android:textSize="20sp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        tools:text="$143.20" />
+
+
+    <com.google.android.material.textfield.TextInputLayout
+        android:id="@+id/sum_input_wrap"
+        style="@style/LoginTextInputLayoutStyle"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginHorizontal="30dp"
+        android:layout_marginTop="20dp"
+        android:hint="Amount"
+        app:errorEnabled="true"
+        app:errorIconDrawable="@drawable/ic_error"
+        app:errorIconTint="@color/red_error"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/symbol_tv">
+
+        <com.google.android.material.textfield.TextInputEditText
+            android:id="@+id/sum_input"
+            android:layout_width="match_parent"
+            android:layout_height="55dp"
+            android:imeOptions="actionDone"
+            android:textCursorDrawable="@null"
+            android:inputType="numberDecimal"
+            android:lines="1"
+            android:maxLines="1"
+            android:textColor="@color/gray" />
+
+    </com.google.android.material.textfield.TextInputLayout>
+
+    <include layout="@layout/buy_sell_switch"
+        android:id="@+id/buy_sell_switch"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginHorizontal="30dp"
+        android:layout_marginTop="5dp"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/sum_input_wrap"/>
+
+    <Button
+        android:id="@+id/confirm_btn"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_margin="20dp"
+        android:text="Confirm"
+        android:textColor="@color/gray"
+        android:backgroundTint="#2B3150"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/buy_sell_switch"
+        app:layout_constraintBottom_toBottomOf="parent"/>
+</androidx.constraintlayout.widget.ConstraintLayout>

@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <data>
+        <import
+            alias="ExtFun"
+            type="com.konovus.apitesting.util.ViewExtKt"/>
+        <variable
+            name="stock"
+            type="com.konovus.apitesting.data.local.entities.Stock" />
+    </data>
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:paddingTop="5dp"
+        android:paddingHorizontal="15dp"
+        android:paddingBottom="65dp"
+        android:background="@color/dark_blue">
+
+        <LinearLayout
+            android:id="@+id/ll_wrap"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            app:layout_constraintTop_toTopOf="parent"
+            android:orientation="vertical">
+
+            <include
+                layout="@layout/statistics_item"
+                app:labelText="@{`Name`}"
+                app:value="@{stock.name}"/>
+            <include
+                layout="@layout/statistics_item"
+                app:labelText="@{`Exchange`}"
+                app:value="@{stock.exchange}"/>
+            <include
+                layout="@layout/statistics_item"
+                app:labelText="@{`Industry`}"
+                app:value="@{stock.industry}"/>
+            <include
+                layout="@layout/statistics_item"
+                app:labelText="@{`Sector`}"
+                app:value="@{stock.sector}"/>
+            <include
+                layout="@layout/statistics_item"
+                app:labelText="@{`CEO`}"
+                app:value="@{stock.ceo}"/>
+            <include
+                layout="@layout/statistics_item"
+                app:labelText="@{`Market cap`}"
+                app:value="@{stock.marketcap}"/>
+        </LinearLayout>
+
+        <TextView
+            android:id="@+id/description_tv"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/ll_wrap"
+            android:text="Description:"
+            android:textSize="16sp"
+            android:textColor="@color/gray_600"
+            android:paddingVertical="5dp"
+            android:fontFamily="@font/ubuntu_medium"/>
+
+        <TextView
+            android:id="@+id/description_value"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@{stock.description}"
+            android:textSize="16sp"
+            android:textColor="@color/gray_bbb"
+            android:paddingVertical="5dp"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/description_tv"/>
+    </androidx.constraintlayout.widget.ConstraintLayout>
+</layout>

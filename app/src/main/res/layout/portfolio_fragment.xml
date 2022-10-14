@@ -1,0 +1,135 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/dark_blue"
+    android:paddingVertical="15dp"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+
+
+    <TextView
+        android:id="@+id/portfolio_tv"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/portfolio"
+        android:textSize="24sp"
+        android:layout_marginStart="15dp"
+        android:textColor="@color/gray"
+        android:fontFamily="@font/ubuntu_regular"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintStart_toStartOf="parent"/>
+
+    <TextView
+        android:id="@+id/balance_label_tv"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="25dp"
+        android:text="@string/balance"
+        android:textColor="@color/dark_gray"
+        android:textSize="14sp"
+        android:textStyle="bold"
+        app:layout_constraintStart_toStartOf="@id/portfolio_tv"
+        app:layout_constraintTop_toBottomOf="@id/portfolio_tv" />
+
+    <TextView
+        android:id="@+id/total_balance_tv"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="$0.0"
+        android:textColor="@color/gray"
+        android:textSize="32sp"
+        android:textStyle="bold"
+        android:layout_marginTop="5dp"
+        app:layout_constraintStart_toStartOf="@id/balance_label_tv"
+        app:layout_constraintTop_toBottomOf="@id/balance_label_tv" />
+
+    <TextView
+        android:id="@+id/portfolio_change_balance_tv"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:paddingVertical="4dp"
+        android:text="+$0.0 / 0.0%"
+        android:textSize="20sp"
+        android:textColor="@color/gray"
+        android:layout_marginEnd="15dp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="@id/total_balance_tv"
+        app:layout_constraintBottom_toBottomOf="@id/total_balance_tv"/>
+
+    <View
+        android:id="@+id/divider"
+        android:layout_width="match_parent"
+        android:layout_height="10dp"
+        android:background="@color/bg_main"
+        android:layout_marginTop="40dp"
+        app:layout_constraintTop_toBottomOf="@id/portfolio_change_balance_tv" />
+
+    <TextView
+        android:id="@+id/total_stocks_label"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Your stocks"
+        android:textSize="20sp"
+        android:textColor="@color/gray"
+        android:fontFamily="@font/ubuntu_medium"
+        android:layout_marginTop="10dp"
+        app:layout_constraintTop_toBottomOf="@id/divider"
+        app:layout_constraintStart_toStartOf="@id/portfolio_tv"/>
+
+    <TextView
+        android:id="@+id/stocks_nr"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="0"
+        android:textSize="20sp"
+        android:textColor="@color/gray"
+        android:layout_marginEnd="15dp"
+        android:fontFamily="@font/ubuntu_medium"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="@id/total_stocks_label"
+        app:layout_constraintBottom_toBottomOf="@id/total_stocks_label"/>
+
+
+
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/recycler_view"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_marginTop="20dp"
+        android:layout_marginHorizontal="10dp"
+        app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
+        app:layout_constraintTop_toBottomOf="@id/total_stocks_label"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"/>
+
+    <TextView
+        android:id="@+id/no_stocks_owned_tv"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="You don't own any stocks"
+        android:layout_marginTop="100dp"
+        android:textColor="@color/dark_gray"
+        android:textSize="20sp"
+        android:fontFamily="@font/ubuntu_regular"
+        android:textAlignment="center"
+        android:visibility="invisible"
+        app:layout_constraintTop_toBottomOf="@id/stocks_nr"/>
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/add_stocks_btn"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        app:icon="@drawable/ic_round_add_24"
+        style="?attr/materialButtonOutlinedStyle"
+        android:visibility="invisible"
+        app:strokeColor="@color/dark_gray"
+        app:iconTint="@color/gray"
+        app:iconPadding="0dp"
+        app:iconSize="35dp"
+        app:iconGravity="textStart"
+        android:layout_marginTop="5dp"
+        app:layout_constraintTop_toBottomOf="@id/no_stocks_owned_tv"
+        app:layout_constraintStart_toStartOf="@id/no_stocks_owned_tv"
+        app:layout_constraintEnd_toEndOf="@id/no_stocks_owned_tv"/>
+
+</androidx.constraintlayout.widget.ConstraintLayout>

@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<navigation xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/nav_graph.xml"
+    app:startDestination="@id/mainFragment">
+    <fragment
+        android:id="@+id/mainFragment"
+        android:name="com.konovus.apitesting.ui.mainScreen.MainFragment"
+        android:label="MainFragment">
+        <action
+            android:id="@+id/action_mainFragment_to_infoFragment"
+            app:destination="@id/infoFragment"/>
+        <action
+            android:id="@+id/action_mainFragment_to_searchFragment"
+            app:destination="@id/searchFragment" />
+        <action
+            android:id="@+id/action_mainFragment_to_portfolioFragment"
+            app:destination="@id/portfolioFragment" />
+    </fragment>
+    <fragment
+        android:id="@+id/infoFragment"
+        android:name="com.konovus.apitesting.ui.infoScreen.InfoFragment"
+        android:label="{name}">
+        <argument
+            android:name="name"
+            app:argType="string" />
+        <argument
+            android:name="symbol"
+            app:argType="string" />
+    </fragment>
+    <fragment
+        android:id="@+id/searchFragment"
+        android:name="com.konovus.apitesting.ui.searchScreen.SearchFragment"
+        android:label="Search...">
+        <action
+            android:id="@+id/action_searchFragment_to_portfolioFragment"
+            app:destination="@id/portfolioFragment" />
+        <action
+            android:id="@+id/action_searchFragment_to_infoFragment"
+            app:destination="@id/infoFragment" />
+    </fragment>
+    <fragment
+        android:id="@+id/portfolioFragment"
+        android:name="com.konovus.apitesting.ui.portfolioScreen.PortfolioFragment"
+        android:label="@string/portfolio">
+        <action
+            android:id="@+id/action_portfolioFragment_to_infoFragment"
+            app:destination="@id/infoFragment" />
+        <argument
+            android:name="portfolio"
+            app:argType="com.konovus.apitesting.data.local.entities.Portfolio" />
+        <action
+            android:id="@+id/action_portfolioFragment_to_searchFragment"
+            app:destination="@id/searchFragment" />
+    </fragment>
+</navigation>
