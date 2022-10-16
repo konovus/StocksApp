@@ -3,55 +3,47 @@ package com.konovus.apitesting.util
 import android.content.Context
 import android.net.ConnectivityManager
 import android.net.Network
-import android.util.Log
-import com.konovus.apitesting.util.Constants.TAG
-import kotlinx.coroutines.channels.awaitClose
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.callbackFlow
-import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.launch
+import android.net.NetworkCapabilities
+import android.net.NetworkRequest
+import androidx.lifecycle.LiveData
+import androidx.lifecycle.asLiveData
+import kotlinx.coroutines.flow.MutableStateFlow
 
 class NetworkConnectionObserver(
     val context: Context
 ) {
 
     private val connectivityManager = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+    private val networkRequest = NetworkRequest.Builder()
+        .addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+        .addTransportType(NetworkCapabilities.TRANSPORT_WIFI)
+        .build()
     private var switchBack = true
+    private val _connection = MutableStateFlow(NetworkStatus.Unavailable)
+    val connection: LiveData<NetworkStatus> = _connection.asLiveData()
 
-    fun observeConnection(): Flow<NetworkStatus> {
-        return callbackFlow {
-            val networkCallback = object : ConnectivityManager.NetworkCallback() {
-                override fun onAvailable(network: Network) {
-                    super.onAvailable(network)
-                    launch {
-                        if (switchBack) {
-                            send(NetworkStatus.BackOnline)
-                            switchBack = false
-                        } else send(NetworkStatus.Available)
-                    }
-                }
-
-                override fun onLost(network: Network) {
-                    super.onLost(network)
-                    launch {
-                        switchBack = true
-                        send(NetworkStatus.Unavailable)
-                    }
-                }
-
-                override fun onUnavailable() {
-                    super.onUnavailable()
-                    launch {
-                        switchBack = true
-                        send(NetworkStatus.Unavailable)
-                    }
-                }
+    init {
+        val networkCallback = object : ConnectivityManager.NetworkCallback() {
+            override fun onAvailable(network: Network) {
+                super.onAvailable(network)
+                if (switchBack) {
+                    _connection.value = (NetworkStatus.BackOnline)
+                    switchBack = false
+                } else _connection.value = (NetworkStatus.Available)
             }
-            send(NetworkStatus.Unavailable)
-            connectivityManager.registerDefaultNetworkCallback(networkCallback)
-            awaitClose {
-                connectivityManager.unregisterNetworkCallback(networkCallback)
+
+            override fun onLost(network: Network) {
+                super.onLost(network)
+                    switchBack = true
+                    _connection.value = (NetworkStatus.Unavailable)
             }
-        }.distinctUntilChanged()
+
+            override fun onUnavailable() {
+                super.onUnavailable()
+                    switchBack = true
+                    _connection.value = (NetworkStatus.Unavailable)
+            }
+        }
+        connectivityManager.requestNetwork(networkRequest, networkCallback)
     }
 }

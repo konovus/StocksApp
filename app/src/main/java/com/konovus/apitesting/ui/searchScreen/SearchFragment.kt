@@ -13,7 +13,6 @@ import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.asLiveData
 import androidx.lifecycle.distinctUntilChanged
-import androidx.lifecycle.map
 import androidx.navigation.fragment.findNavController
 import com.konovus.apitesting.R
 import com.konovus.apitesting.data.local.entities.CompanyInfo
@@ -39,12 +38,12 @@ class SearchFragment : Fragment(R.layout.search_fragment), SearchAdapter.OnItemC
     }
 
     private fun bindLayoutData() {
-        viewModel.state.distinctUntilChanged().observe(viewLifecycleOwner) { state ->
-            Log.i(TAG, "searchFragment state: $state")
+        viewModel.state.observe(viewLifecycleOwner) { state ->
+            Log.i(TAG, "SearchFragment: bindLayoutData: $state")
             binding.progressBar.isVisible = state.isLoading
             binding.swipeRefreshLayout.isRefreshing = state.isRefreshing
 
-                state.companies.asLiveData().distinctUntilChanged().observe(viewLifecycleOwner) {
+            state.companies.asLiveData().distinctUntilChanged().observe(viewLifecycleOwner) {
                 val adapter = SearchAdapter(this@SearchFragment)
                 binding.recyclerView.adapter = adapter
                 adapter.submitData(lifecycle, it)
@@ -111,10 +110,8 @@ class SearchFragment : Fragment(R.layout.search_fragment), SearchAdapter.OnItemC
     }
 
     override fun onItemClick(company: CompanyInfo, position: Int) {
-        val action = SearchFragmentDirections.actionSearchFragmentToInfoFragment(
-            company.name,
-            company.symbol
-        )
+        val action =
+            SearchFragmentDirections.actionSearchFragmentToInfoFragment(company.name, company.symbol)
         findNavController().navigate(action)
     }
 }

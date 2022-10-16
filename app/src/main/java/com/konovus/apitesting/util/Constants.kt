@@ -5,7 +5,7 @@ object Constants {
     const val API_KEY = "API_KEY9bVEJ4M42Z4NHL24AM37FKZDBAQXZRNP"
     const val TWELVE_API_KEY = "43a182ca6cd7414daa66a4ba8eb1c5aa"
     const val API_KEY1 = "SPdILsBtZAQ8nWt5v5TN5gySPABNpci2SKt6wMP2"
-    const val API_KEY2 = "42OG87U8QU6I5T3O"
+    const val API_KEY_ALPHA_VANTAGE = "42OG87U8QU6I5T3O"
     const val BASE_URL = "https://api.finage.co.uk/"
     const val TWELVE_BASE_URL = "https://api.twelvedata.com/"
     const val BASE_URL1 = "https://yfapi.net"

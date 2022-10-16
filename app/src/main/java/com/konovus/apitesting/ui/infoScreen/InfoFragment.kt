@@ -2,9 +2,8 @@ package com.konovus.apitesting.ui.infoScreen
 
 import android.R.attr.fillColor
 import android.os.Bundle
-import android.util.Log
 import android.view.View
-import android.widget.*
+import android.widget.Toast
 import androidx.core.content.ContextCompat
 import androidx.core.view.children
 import androidx.core.view.isVisible
@@ -23,14 +22,17 @@ import com.google.android.material.bottomnavigation.BottomNavigationView
 import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.google.android.material.snackbar.Snackbar
 import com.konovus.apitesting.R
-import com.konovus.apitesting.data.local.entities.*
+import com.konovus.apitesting.data.local.entities.IntraDayInfo
+import com.konovus.apitesting.data.local.entities.OrderType
+import com.konovus.apitesting.data.local.entities.Transaction
 import com.konovus.apitesting.databinding.BottomSheetBinding
 import com.konovus.apitesting.databinding.InfoFragmentBinding
 import com.konovus.apitesting.transactionsItem
-import com.konovus.apitesting.util.*
-import com.konovus.apitesting.util.Constants.TAG
+import com.konovus.apitesting.util.MpMarker
+import com.konovus.apitesting.util.OnTabSelected
+import com.konovus.apitesting.util.combineWith
+import com.konovus.apitesting.util.toNDecimals
 import dagger.hilt.android.AndroidEntryPoint
-import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.map
 
 
@@ -196,6 +198,7 @@ class InfoFragment : Fragment(R.layout.info_fragment) {
             axisLeft.textColor = ContextCompat.getColor(requireContext(), R.color.gray)
             axisLeft.setLabelCount(4, true)
             axisLeft.setDrawGridLines(false)
+            axisLeft.setDrawAxisLine(false)
 
             val lineDataSet = LineDataSet(entries, "Default entries")
             val lineData = LineData(lineDataSet)

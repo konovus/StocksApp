@@ -17,5 +17,5 @@ data class AppState(
     val endOfDayDataResponseList: Map<String, EndOfDayDataResponse> = emptyMap(),
     val chartData: Map<String, List<IntraDayInfo>> = emptyMap(),
     val bottomNavSelectedId: Int = R.id.mainFragment,
-    val networkStatus: NetworkStatus = NetworkStatus.Unavailable
+    val networkStatus: NetworkStatus = NetworkStatus.Available
 )

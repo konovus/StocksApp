@@ -5,7 +5,6 @@ import android.util.Log
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.isVisible
-import androidx.lifecycle.asLiveData
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.NavController
 import androidx.navigation.fragment.NavHostFragment
@@ -19,9 +18,6 @@ import com.konovus.apitesting.util.NetworkConnectionObserver
 import com.konovus.apitesting.util.NetworkStatus
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.launchIn
-import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -47,9 +43,6 @@ class MainActivity : AppCompatActivity() {
         val bottomNav = findViewById<BottomNavigationView>(R.id.bottom_navigation)
         NavigationUI.setupWithNavController(bottomNav, navController)
 
-//        store.stateFlow.map { it.bottomNavSelectedId }.distinctUntilChanged().asLiveData().observe(this){
-//            bottomNav.selectedItemId = it
-//        }
     }
 
     fun navigateToTab(id: Int) {
@@ -58,19 +51,16 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun setupNetworkObserver() {
-        val networkObserver =  NetworkConnectionObserver(this)
-        networkObserver.observeConnection().onEach { networkStatus ->
-            Log.i(TAG, "setupNetworkObserver: $networkStatus")
-            store.update { it.copy(networkStatus = networkStatus) }
-        }.launchIn(lifecycleScope)
-
+        val networkObserver =  NetworkConnectionObserver(applicationContext)
         val networkStatusTV = findViewById<TextView>(R.id.no_internet_tv)
-        store.stateFlow.map { it.networkStatus }.asLiveData().observe(this) {
-            when(it) {
+
+        networkObserver.connection.observe(this) { networkStatus ->
+            Log.i(TAG, "setupNetworkObserver: $networkStatus")
+            when(networkStatus) {
                 NetworkStatus.BackOnline -> {
                     lifecycleScope.launch{
                         networkStatusTV.text = "Back Online"
-                        delay(100)
+                        delay(150)
                         networkStatusTV.isVisible = false
                     }
                 }
@@ -79,9 +69,30 @@ class MainActivity : AppCompatActivity() {
                     networkStatusTV.isVisible = true
                 }
                 NetworkStatus.Available -> {}
-                else -> { throw NoSuchFieldException()}
+                else -> throw NoSuchFieldException()
+            }
+            lifecycleScope.launch {
+                store.update { it.copy(networkStatus = networkStatus) }
             }
         }
+//
+//        store.stateFlow.map { it.networkStatus }.asLiveData().observe(this) {
+//            when(it) {
+//                NetworkStatus.BackOnline -> {
+//                    lifecycleScope.launch{
+//                        networkStatusTV.text = "Back Online"
+//                        delay(150)
+//                        networkStatusTV.isVisible = false
+//                    }
+//                }
+//                NetworkStatus.Unavailable -> {
+//                    networkStatusTV.text = "No internet connection"
+//                    networkStatusTV.isVisible = true
+//                }
+//                NetworkStatus.Available -> {}
+//                else -> throw NoSuchFieldException()
+//            }
+//        }
     }
 
     override fun onSupportNavigateUp(): Boolean {

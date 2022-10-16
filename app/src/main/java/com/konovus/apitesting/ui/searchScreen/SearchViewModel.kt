@@ -11,12 +11,10 @@ import androidx.paging.PagingData
 import androidx.paging.cachedIn
 import com.konovus.apitesting.R
 import com.konovus.apitesting.data.local.dao.CompanyDao
-import com.konovus.apitesting.data.local.dao.PortfolioDao
 import com.konovus.apitesting.data.local.entities.CompanyInfo
 import com.konovus.apitesting.data.redux.AppState
 import com.konovus.apitesting.data.redux.Store
 import com.konovus.apitesting.data.repository.AlphaVantageRepository
-import com.konovus.apitesting.util.Constants
 import com.konovus.apitesting.util.Constants.TAG
 import com.konovus.apitesting.util.NetworkStatus
 import com.konovus.apitesting.util.Resource
@@ -77,8 +75,8 @@ class SearchViewModel @Inject constructor(
         query: String = stateFlow.value.searchQuery.lowercase(),
         fetchFromRemote: Boolean = false
     ) {
+        stateFlow.value = stateFlow.value.copy(isLoading = true)
         viewModelScope.launch {
-            stateFlow.value = stateFlow.value.copy(isLoading = true)
             repository
                 .getCompanyListings(fetchFromRemote, query)
                 .collectLatest { result ->
@@ -94,9 +92,7 @@ class SearchViewModel @Inject constructor(
                                             enablePlaceholders = false,
                                         )
                                     ) { companyDao.searchCompanyInfoPaged(query) }
-                                        .flow.cachedIn(viewModelScope),
-                                    isLoading = false
-                                )
+                                        .flow.cachedIn(viewModelScope))
                             }
                         }
                         is Resource.Loading -> {

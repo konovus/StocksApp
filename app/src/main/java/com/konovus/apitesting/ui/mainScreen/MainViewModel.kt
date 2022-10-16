@@ -1,6 +1,7 @@
 package com.konovus.apitesting.ui.mainScreen
 
 import android.app.Application
+import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.asLiveData
@@ -13,6 +14,7 @@ import com.konovus.apitesting.data.local.entities.Stock
 import com.konovus.apitesting.data.redux.AppState
 import com.konovus.apitesting.data.redux.Store
 import com.konovus.apitesting.data.repository.MainRepository
+import com.konovus.apitesting.util.Constants.TAG
 import com.konovus.apitesting.util.NetworkStatus
 import com.konovus.apitesting.util.Resource
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -47,8 +49,10 @@ class MainViewModel @Inject constructor(
         viewModelScope.launch {
             store.stateFlow.map { it.networkStatus }.distinctUntilChanged().collectLatest {
                 if (it == NetworkStatus.BackOnline
-                    && store.stateFlow.value.bottomNavSelectedId == R.id.mainFragment)
+                    && store.stateFlow.value.bottomNavSelectedId == R.id.mainFragment) {
+                    Log.i(TAG, "Main ViewModel: observeConnectivity: BackOnline initSetup")
                     initSetup()
+                }
             }
         }
     }

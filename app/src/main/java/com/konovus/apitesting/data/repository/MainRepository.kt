@@ -54,6 +54,9 @@ class MainRepository @Inject constructor(
             Log.i(TAG, "makeNetworkCall Response: ${response?.code()} , ${response?.errorBody()} , ${response?.body()}")
             Log.i(TAG, "makeNetworkCall Error: $tag , ${e.message} , ${e.localizedMessage}")
             Resource.Error("Couldn't reach the server. Check your internet connection.", null)
+        } catch (e: Exception) {
+            Log.i(TAG, "makeNetworkCall: Unknown Error: ${e.cause}.")
+            Resource.Error("Couldn't reach the server. Check your internet connection.", null)
         }
     }
 
@@ -78,7 +81,8 @@ class MainRepository @Inject constructor(
         var updatedBalance = 0.0
         val nr = portfolio.stocksToShareAmount.keys.size
         val localList = mutableListOf<Stock>()
-        var result: Resource<LinkedTreeMap<String, PriceResponse>>? = null
+        val updatedList = mutableListOf<Stock>()
+        var result: Resource<LinkedTreeMap<String, PriceResponse>>?
         for (i in 0..nr step 8) {
             val symbols = portfolio.stocksToShareAmount.keys.filterIndexed { index, _ -> index in i..i+7}
                 .joinToString(",")
@@ -91,13 +95,19 @@ class MainRepository @Inject constructor(
                 it.value.toString().contains("null")
                 }.mapNotNull { getLocalStockBySymbol(it.key) }
             )
+
+            localList.map { localStock ->
+                updatedList.add( localStock.copy(
+                    price = result.data!![localStock.symbol]!!.price.toDouble().toNDecimals(2)
+                    )
+                )
+            }
+
+            localList.clear()
             if (nr > 8 && i <= nr - 8)
                 delay(60 * 1000)
         }
 
-        val updatedList = localList.map { localStock ->
-            localStock.copy(
-                price = result!!.data!![localStock.symbol]!!.price.toDouble().toNDecimals(2)) }
         insertStocks(updatedList)
         updatedList.forEach {
             updatedBalance += it.price * portfolio.stocksToShareAmount[it.symbol]!!

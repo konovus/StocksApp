@@ -68,6 +68,7 @@ class AlphaVantageRepository @Inject constructor(
                 is Resource.Loading -> emit((Resource.Loading(true)))
                 is Resource.Success -> {
                     emit(Resource.Success(companyDao.searchCompanyInfoPaged(query)))
+                    emit(Resource.Loading(false))
                 }
             }
         }
