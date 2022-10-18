@@ -6,6 +6,7 @@ import com.google.gson.JsonSyntaxException
 import com.google.gson.internal.LinkedTreeMap
 import com.google.gson.reflect.TypeToken
 import com.konovus.apitesting.data.api.TwelveApi
+import com.konovus.apitesting.data.api.YhFinanceApi
 import com.konovus.apitesting.data.local.dao.PortfolioDao
 import com.konovus.apitesting.data.local.dao.StockDao
 import com.konovus.apitesting.data.local.entities.OrderType
@@ -28,6 +29,7 @@ class MainRepository @Inject constructor(
     private val stockDao: StockDao,
     private val portfolioDao: PortfolioDao,
     private val twelveApi: TwelveApi,
+    private val yhFinanceApi: YhFinanceApi,
     private val store: Store<AppState>
 ) {
 
@@ -61,8 +63,24 @@ class MainRepository @Inject constructor(
     }
 
     suspend fun updatePortfolioStocksPrices(portfolio: Portfolio) {
-        val updatedBalance = if (portfolio.stocksToShareAmount.keys.size == 1)
-            getUpdatedBalanceForSingleStock(portfolio) else getUpdatedBalanceForMultipleStocks(portfolio)
+        val result = makeNetworkCall("updatePortfolioStockPrices") {
+            yhFinanceApi.getMultipleQuotes(portfolio.stocksToShareAmount.keys.joinToString(","))
+        }
+        if (result.data == null) return
+        val responseList = result.data.quoteResponse.result.map { Pair(it.symbol, it.regularMarketPrice) }
+        val localList = result.data.quoteResponse.result.filterNot {
+            it.toString().contains("null")
+        }.mapNotNull { getLocalStockBySymbol(it.symbol) }
+
+        val updatedList = localList.map { stock ->
+            stock.copy(price = responseList.find { it.first == stock.symbol }?.second ?: stock.price,
+                priceLastUpdated = System.currentTimeMillis())
+        }
+        insertStocks(updatedList)
+        var updatedBalance = 0.0
+        updatedList.forEach {
+            updatedBalance += it.price * portfolio.stocksToShareAmount[it.symbol]!!
+        }
         if (updatedBalance == 0.0) return
         val initialBalance = portfolio.transactions.filter { it.orderType == OrderType.Buy }.sumOf { it.amount }
             .minus(portfolio.transactions.filter { it.orderType == OrderType.Sell }.sumOf { it.amount })

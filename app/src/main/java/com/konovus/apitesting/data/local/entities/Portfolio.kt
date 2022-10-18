@@ -1,11 +1,8 @@
 package com.konovus.apitesting.data.local.entities
 
 import android.os.Parcelable
-import android.util.Log
 import androidx.room.Entity
 import androidx.room.PrimaryKey
-import com.konovus.apitesting.util.Constants.TAG
-import com.konovus.apitesting.util.toNDecimals
 import kotlinx.parcelize.Parcelize
 
 @Entity(tableName = "portfolios_table")
@@ -22,19 +19,9 @@ data class Portfolio(
 
     val stocksToShareAmount: Map<String, Double>
         get() = transactions.map {
-            it.symbol to if (it.orderType == OrderType.Buy) (it.amount / it.price).toNDecimals(2)
-            else -(it.amount / it.price).toNDecimals(2)
-        }.groupBy { it.first }.map { it.key to it.value.map { it.second }.sumOf { it }.toNDecimals(2) }
+            it.symbol to if (it.orderType == OrderType.Buy) (it.amount / it.price)
+            else -(it.amount / it.price)
+        }.groupBy { it.first }.map { it.key to it.value.map { it.second }.sumOf { it } }
             .toMap().filter { it.value > 0 }
 
-    fun stocksToShareAmount(): Map<String, Double> {
-        val stocksToShareAmount =
-            transactions.
-            map {
-            it.symbol to if (it.orderType == OrderType.Buy) (it.amount / it.price).toNDecimals(2)
-            else -(it.amount / it.price).toNDecimals(2)
-        }.groupBy { it.first }.map { it.key to it.value.map { it.second }.sumOf { it }.toNDecimals(2) }.toMap()
-        stocksToShareAmount.map { Pair(it.key, it.value) }.toMutableList().removeIf{ it.second == 0.0 }
-        return stocksToShareAmount
-    }
 }

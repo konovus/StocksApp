@@ -5,6 +5,7 @@ import androidx.room.Room
 import com.konovus.apitesting.data.api.AlphaVantageApi
 import com.konovus.apitesting.data.api.FinageApi
 import com.konovus.apitesting.data.api.TwelveApi
+import com.konovus.apitesting.data.api.YhFinanceApi
 import com.konovus.apitesting.data.local.dao.CompanyDao
 import com.konovus.apitesting.data.local.dao.PortfolioDao
 import com.konovus.apitesting.data.local.dao.StockDao
@@ -15,6 +16,7 @@ import com.konovus.apitesting.data.redux.AppState
 import com.konovus.apitesting.data.redux.Store
 import com.konovus.apitesting.util.Constants.BASE_URL
 import com.konovus.apitesting.util.Constants.BASE_URL2
+import com.konovus.apitesting.util.Constants.BASE_URL_YH_FINANCE
 import com.konovus.apitesting.util.Constants.TWELVE_BASE_URL
 import com.konovus.apitesting.util.NetworkConnectionObserver
 import com.squareup.moshi.Moshi
@@ -83,6 +85,16 @@ object AppModule {
             .baseUrl(BASE_URL2)
             .build()
             .create(AlphaVantageApi::class.java)
+    }
+
+    @Provides
+    @Singleton
+    fun provideYhFinanceApi(): YhFinanceApi {
+        return Retrofit.Builder()
+            .addConverterFactory(GsonConverterFactory.create())
+            .baseUrl(BASE_URL_YH_FINANCE)
+            .build()
+            .create(YhFinanceApi::class.java)
     }
 
     @Provides

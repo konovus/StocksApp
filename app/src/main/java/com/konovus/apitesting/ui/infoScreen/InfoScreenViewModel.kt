@@ -5,10 +5,12 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.asLiveData
 import androidx.lifecycle.viewModelScope
-import com.konovus.apitesting.R
 import com.konovus.apitesting.data.api.AlphaVantageApi
 import com.konovus.apitesting.data.api.FinageApi
-import com.konovus.apitesting.data.local.entities.*
+import com.konovus.apitesting.data.local.entities.IntraDayInfo
+import com.konovus.apitesting.data.local.entities.OrderType
+import com.konovus.apitesting.data.local.entities.Stock
+import com.konovus.apitesting.data.local.entities.Transaction
 import com.konovus.apitesting.data.redux.AppState
 import com.konovus.apitesting.data.redux.Store
 import com.konovus.apitesting.data.remote.responses.QuoteResponse
@@ -129,6 +131,10 @@ class InfoScreenViewModel @Inject constructor(
                     map[symbol] = quoteResponse.globalQuote
                     it.copy(quoteList = map)
                 }
+//                repository.updateStock(
+//                    getLocalStock(symbol, "")
+//                        .copy(price = quoteResponse.globalQuote.price.toDouble().toNDecimals(2))
+//                )
                 stateFlow.value = stateFlow.value.copy(
                     quote = quoteResponse.globalQuote,
                     isLoading = false,

@@ -75,24 +75,6 @@ class MainActivity : AppCompatActivity() {
                 store.update { it.copy(networkStatus = networkStatus) }
             }
         }
-//
-//        store.stateFlow.map { it.networkStatus }.asLiveData().observe(this) {
-//            when(it) {
-//                NetworkStatus.BackOnline -> {
-//                    lifecycleScope.launch{
-//                        networkStatusTV.text = "Back Online"
-//                        delay(150)
-//                        networkStatusTV.isVisible = false
-//                    }
-//                }
-//                NetworkStatus.Unavailable -> {
-//                    networkStatusTV.text = "No internet connection"
-//                    networkStatusTV.isVisible = true
-//                }
-//                NetworkStatus.Available -> {}
-//                else -> throw NoSuchFieldException()
-//            }
-//        }
     }
 
     override fun onSupportNavigateUp(): Boolean {

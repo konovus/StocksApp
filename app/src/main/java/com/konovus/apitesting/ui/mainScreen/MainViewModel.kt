@@ -1,20 +1,19 @@
 package com.konovus.apitesting.ui.mainScreen
 
 import android.app.Application
-import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.asLiveData
 import androidx.lifecycle.viewModelScope
 import com.konovus.apitesting.R
 import com.konovus.apitesting.data.api.FinageApi
+import com.konovus.apitesting.data.api.YhFinanceApi
 import com.konovus.apitesting.data.local.entities.IntraDayInfo
 import com.konovus.apitesting.data.local.entities.Portfolio
 import com.konovus.apitesting.data.local.entities.Stock
 import com.konovus.apitesting.data.redux.AppState
 import com.konovus.apitesting.data.redux.Store
 import com.konovus.apitesting.data.repository.MainRepository
-import com.konovus.apitesting.util.Constants.TAG
 import com.konovus.apitesting.util.NetworkStatus
 import com.konovus.apitesting.util.Resource
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -26,6 +25,7 @@ import javax.inject.Inject
 class MainViewModel @Inject constructor(
     private val repository: MainRepository,
     private val finageApi: FinageApi,
+    private val yhFinanceApi: YhFinanceApi,
     val store: Store<AppState>,
     app: Application
 ) : AndroidViewModel(app) {
@@ -50,7 +50,6 @@ class MainViewModel @Inject constructor(
             store.stateFlow.map { it.networkStatus }.distinctUntilChanged().collectLatest {
                 if (it == NetworkStatus.BackOnline
                     && store.stateFlow.value.bottomNavSelectedId == R.id.mainFragment) {
-                    Log.i(TAG, "Main ViewModel: observeConnectivity: BackOnline initSetup")
                     initSetup()
                 }
             }
@@ -80,11 +79,12 @@ class MainViewModel @Inject constructor(
         viewModelScope.launch {
             stateFlow.value = stateFlow.value.copy(favoritesLoading = true)
             val result = repository.makeNetworkCall("favorites") {
-                finageApi.getMultipleStocks(localList.joinToString(",") { it.symbol })
+                yhFinanceApi.getMultipleQuotes(localList.joinToString(",") { it.symbol })
             }
             if (result.data == null) return@launch
+            val responseList = result.data.quoteResponse.result.map { Pair(it.symbol, it.regularMarketPrice) }
             val updatedList = localList.map { stock ->
-                stock.copy(price = result.data.find { it?.symbol == stock.symbol }?.ask ?: 0.0,
+                stock.copy(price = responseList.find { it.first == stock.symbol }?.second ?: stock.price,
                     priceLastUpdated = System.currentTimeMillis())
             }
             repository.insertStocks(updatedList)

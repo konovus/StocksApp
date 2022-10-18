@@ -12,6 +12,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:hint="@string/searchHint"
+        android:maxLines="1"
         android:textCursorDrawable="@null"
         android:textSize="20sp"
         android:textSelectHandle="@drawable/handle"
