@@ -11,10 +11,13 @@ import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.map
 import androidx.navigation.fragment.findNavController
 import com.google.android.material.snackbar.Snackbar
+import com.konovus.apitesting.PortfolioStockItemBindingModelBuilder
 import com.konovus.apitesting.R
+import com.konovus.apitesting.data.local.entities.OrderType
 import com.konovus.apitesting.data.local.entities.Portfolio
 import com.konovus.apitesting.data.local.entities.Stock
 import com.konovus.apitesting.databinding.PortfolioFragmentBinding
+import com.konovus.apitesting.portfolioStockItem
 import com.konovus.apitesting.ui.MainActivity
 import com.konovus.apitesting.util.Constants.TAG
 import com.konovus.apitesting.util.Constants.TEN_MINUTES
@@ -48,11 +51,30 @@ class PortfolioFragment: Fragment(R.layout.portfolio_fragment),
                 binding.bindPortfolioData(state.portfolio)
                 binding.noStocksOwnedTv.isVisible = state.stocks.isEmpty()
                 binding.addStocksBtn.isVisible = state.stocks.isEmpty()
-                val adapter = PortfolioStocksAdapter(this@PortfolioFragment, state.portfolio)
-                binding.recyclerView.adapter = adapter
-                adapter.submitList(state.stocks)
+                binding.recyclerView.withModels {
+                    state.stocks.forEach { stock ->
+                        portfolioStockItem {
+                            setupEachPortfolioStockItem(stock, state.portfolio)
+                        }
+                    }
+                }
             }
         }
+    }
+
+    private fun PortfolioStockItemBindingModelBuilder.setupEachPortfolioStockItem(stock: Stock, portfolio: Portfolio) {
+        id(stock.symbol)
+        stock(stock)
+        val amountOwned = portfolio.stocksToShareAmount.getValue(stock.symbol)
+            .times(stock.price).toNDecimals(2)
+        amountOwned(amountOwned.toString())
+        val initialAmount = portfolio.transactions.filter { it.symbol == stock.symbol }.filter { it.orderType == OrderType.Buy }
+            .sumOf { it.amount }.minus(portfolio.transactions.filter { it.symbol == stock.symbol }
+                .filter { it.orderType == OrderType.Sell }.sumOf { it.amount })
+        val currentAmount = portfolio.stocksToShareAmount[stock.symbol]!! * stock.price
+        val changeInPercent = ((currentAmount - initialAmount) / initialAmount * 100).toNDecimals(2)
+        changePercentValue(changeInPercent)
+        changePercent(changeInPercent.toString())
     }
 
     private fun PortfolioFragmentBinding.bindPortfolioData(portfolio: Portfolio) {

@@ -41,8 +41,8 @@ class MainViewModel @Inject constructor(
 
     private fun initSetup() {
         getOrCreateDefaultPortfolio()
-        getFavoritesStocks()
-        getTrendingStocks()
+//        getFavoritesStocks()
+//        getTrendingStocks()
     }
 
     private fun observeConnectivity() {
@@ -58,7 +58,7 @@ class MainViewModel @Inject constructor(
 
     private fun getFavoritesStocks() {
         repository.getFavoritesFlow().onEach {
-            stateFlow.value = stateFlow.value.copy(favoritesList = it)
+            stateFlow.value = stateFlow.value.copy(favoritesList = it.reversed())
         }.launchIn(viewModelScope)
     }
 

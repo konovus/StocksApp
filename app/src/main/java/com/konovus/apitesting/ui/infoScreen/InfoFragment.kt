@@ -10,9 +10,7 @@ import androidx.core.view.isVisible
 import androidx.core.widget.doOnTextChanged
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
-import androidx.lifecycle.asLiveData
-import androidx.lifecycle.distinctUntilChanged
-import androidx.lifecycle.map
+import androidx.lifecycle.*
 import androidx.navigation.fragment.navArgs
 import com.github.mikephil.charting.components.YAxis
 import com.github.mikephil.charting.data.Entry
@@ -29,11 +27,11 @@ import com.konovus.apitesting.databinding.BottomSheetBinding
 import com.konovus.apitesting.databinding.InfoFragmentBinding
 import com.konovus.apitesting.transactionsItem
 import com.konovus.apitesting.util.MpMarker
+import com.konovus.apitesting.util.NetworkStatus
 import com.konovus.apitesting.util.OnTabSelected
-import com.konovus.apitesting.util.combineWith
 import com.konovus.apitesting.util.toNDecimals
 import dagger.hilt.android.AndroidEntryPoint
-import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.*
 
 
 @AndroidEntryPoint
@@ -59,10 +57,11 @@ class InfoFragment : Fragment(R.layout.info_fragment) {
     }
 
     private fun InfoFragmentBinding.bindTransactionsData() {
-        viewModel.store.stateFlow.map { it.portfolio?.transactions }
-        .asLiveData().combineWith( viewModel.state.map { it.tabNr })
-        .distinctUntilChanged().observe(viewLifecycleOwner) { pair ->
-            if (pair.first.isNullOrEmpty() || pair.second != 2) return@observe
+        combine(viewModel.store.stateFlow.map { it.portfolio?.transactions },
+            viewModel.state.map { it.tabNr }.asFlow()) { transactions, tabNr ->
+            Pair(transactions, tabNr)
+        }.distinctUntilChanged().onEach { pair ->
+            if (pair.first.isNullOrEmpty() || pair.second != 2) return@onEach
 
             transactionsTab.epoxyRecyclerView.withModels {
                 pair.first!!.filter { it.symbol == args.symbol }.sortedByDescending { it.dateTime }
@@ -74,15 +73,22 @@ class InfoFragment : Fragment(R.layout.info_fragment) {
                     }
                 }
             }
-        }
+        }.launchIn(lifecycleScope)
     }
 
 
     private fun InfoFragmentBinding.bindVisibilityAndLoadingAndLayoutStates() {
-        viewModel.state.distinctUntilChanged().observe(viewLifecycleOwner) { state ->
-            progressBar.isVisible = state.isLoading
-            topWrap.isVisible = !state.isLoading
-            bottomWrap.isVisible = !state.isLoading
+        combine(viewModel.state.asFlow().distinctUntilChanged(),
+                viewModel.store.stateFlow.map { it.networkStatus })  { state, networkStatus  ->
+            Pair(state, networkStatus)
+        }.onEach {
+            val state = it.first
+            val networkStatus = it.second
+
+            progressBar.isVisible = state.isLoading && networkStatus != NetworkStatus.Unavailable
+            topWrap.isVisible = !state.isLoading && networkStatus != NetworkStatus.Unavailable
+            bottomWrap.isVisible = !state.isLoading && networkStatus != NetworkStatus.Unavailable
+            tradeBtn.isVisible = networkStatus != NetworkStatus.Unavailable
             chart.visibility = if (!state.chartLoading) View.VISIBLE else View.INVISIBLE
             progressChart.isVisible = state.chartLoading
             symbolTv.text = args.symbol
@@ -97,7 +103,8 @@ class InfoFragment : Fragment(R.layout.info_fragment) {
             noTransactions.isVisible = state.transactions.isEmpty() && state.tabNr == 2
             state.detailsStock?.let{ detailsStock = it }
             follow.isSelected = state.stock?.isFavorite == true
-        }
+
+        }.launchIn(lifecycleScope)
     }
 
     private fun InfoFragmentBinding.bindQuoteData() {

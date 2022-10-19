@@ -18,6 +18,7 @@ import com.konovus.apitesting.R
 import com.konovus.apitesting.data.local.entities.CompanyInfo
 import com.konovus.apitesting.databinding.SearchFragmentBinding
 import com.konovus.apitesting.util.Constants.TAG
+import com.konovus.apitesting.util.NetworkStatus
 import dagger.hilt.android.AndroidEntryPoint
 
 
