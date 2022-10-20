@@ -3,9 +3,6 @@
     xmlns:app="http://schemas.android.com/apk/res-auto">
 
     <data>
-        <import
-            alias="ExtFun"
-            type="com.konovus.apitesting.util.ViewExtKt"/>
         <variable
             name="stock"
             type="com.konovus.apitesting.data.local.entities.Stock" />
@@ -33,23 +30,23 @@
             <include
                 layout="@layout/statistics_item"
                 app:labelText="@{`Exchange`}"
-                app:value="@{stock.exchange}"/>
+                app:value="@{stock.descriptionStats.exchange}"/>
             <include
                 layout="@layout/statistics_item"
                 app:labelText="@{`Industry`}"
-                app:value="@{stock.industry}"/>
+                app:value="@{stock.descriptionStats.industry}"/>
             <include
                 layout="@layout/statistics_item"
                 app:labelText="@{`Sector`}"
-                app:value="@{stock.sector}"/>
+                app:value="@{stock.descriptionStats.sector}"/>
             <include
                 layout="@layout/statistics_item"
-                app:labelText="@{`CEO`}"
-                app:value="@{stock.ceo}"/>
+                app:labelText="@{`Employees`}"
+                app:value="@{String.valueOf(stock.descriptionStats.employees)}"/>
             <include
                 layout="@layout/statistics_item"
                 app:labelText="@{`Market cap`}"
-                app:value="@{stock.marketcap}"/>
+                app:value="@{stock.descriptionStats.marketCap}"/>
         </LinearLayout>
 
         <TextView
@@ -68,7 +65,7 @@
             android:id="@+id/description_value"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="@{stock.description}"
+            android:text="@{stock.descriptionStats.description}"
             android:textSize="16sp"
             android:textColor="@color/gray_bbb"
             android:paddingVertical="5dp"

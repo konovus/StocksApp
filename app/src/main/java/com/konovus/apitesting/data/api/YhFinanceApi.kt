@@ -1,6 +1,7 @@
 package com.konovus.apitesting.data.api
 
 import com.konovus.apitesting.data.remote.responses.MultipleQuotesResponse
+import com.konovus.apitesting.data.remote.responses.StockSummaryResponse
 import com.konovus.apitesting.util.Constants
 import retrofit2.Response
 import retrofit2.http.GET
@@ -16,5 +17,12 @@ interface YhFinanceApi {
         @Query("symbols") symbols: String,
         @Query("symbols") region: String = "US",
     ): Response<MultipleQuotesResponse>
+
+    @Headers("X-RapidAPI-Key: ${Constants.API_KEY_YH_FINANCE}",
+            "X-RapidAPI-Host: yh-finance.p.rapidapi.com")
+    @GET("stock/v2/get-summary")
+    suspend fun getStockSummary(
+        @Query("symbol") symbol: String,
+    ): Response<StockSummaryResponse>
 
 }

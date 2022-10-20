@@ -50,7 +50,6 @@ class MpMarker(
     }
 
     override fun draw(canvas: Canvas?, posX: Float, posY: Float) {
-        Log.i(TAG, "draw: $posX, $posY")
         val pos = IntArray(2)
         chart.getLocationOnScreen(pos)
 

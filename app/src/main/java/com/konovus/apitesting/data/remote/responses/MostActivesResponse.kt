@@ -14,7 +14,6 @@ data class MostActivesResponse(
                 name = company_name,
                 symbol = symbol,
                 change = change.toNDecimals(2),
-                changeInPercentageString = change_percentage.toDouble().toNDecimals(2).toString(),
                 price = price.toDouble().toNDecimals(2)
             )
 

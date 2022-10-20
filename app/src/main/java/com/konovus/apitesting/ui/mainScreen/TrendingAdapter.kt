@@ -9,7 +9,6 @@ import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import com.konovus.apitesting.R
 import com.konovus.apitesting.data.local.entities.Stock
-import com.konovus.apitesting.databinding.StockItemBinding
 import com.konovus.apitesting.databinding.TrendingItemBinding
 
 class TrendingAdapter(
@@ -49,7 +48,7 @@ class TrendingAdapter(
                 name.text = stock.name
                 symbol.text = stock.symbol
                 price.text = "${stock.price}$"
-                change.text = "${stock.changeInPercentageString}%"
+                change.text = "${stock.changePercent}%"
 
                 if (stock.change > 0)
                     change.setTextColor(ContextCompat.getColor(binding.root.context, R.color.green))

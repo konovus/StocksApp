@@ -13,6 +13,6 @@ data class StockLastQuoteResponse(
     fun toStock() = Stock(
         symbol = symbol,
         price = ask,
-        priceLastUpdated = System.currentTimeMillis()
+        lastUpdatedTime = System.currentTimeMillis()
     )
 }

@@ -5,9 +5,6 @@ import androidx.room.Entity
 import androidx.room.PrimaryKey
 import com.squareup.moshi.Json
 import kotlinx.parcelize.Parcelize
-import java.math.BigInteger
-import kotlin.math.ln
-import kotlin.math.pow
 
 @Entity
 @Parcelize
@@ -25,12 +22,4 @@ data class CompanyInfo(
     val isFavorite: Boolean = false
 ): Parcelable {
 
-    fun toStock(): Stock {
-        return Stock(
-            name = name,
-            symbol = symbol,
-            exchange = exchange,
-            isFavorite = isFavorite
-        )
-    }
 }

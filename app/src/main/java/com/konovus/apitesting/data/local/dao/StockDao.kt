@@ -16,7 +16,7 @@ interface StockDao {
     @Insert(onConflict = REPLACE)
     suspend fun insertStocks(stocks: List<Stock>)
 
-    @Query("select * from stocks_table order by changeInPercentage desc")
+    @Query("select * from stocks_table order by changePercent desc")
     fun getAllStocksFlow(): Flow<List<Stock>>
 
     @Query("select * from stocks_table ")

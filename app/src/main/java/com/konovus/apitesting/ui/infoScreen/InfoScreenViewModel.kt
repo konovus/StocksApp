@@ -5,15 +5,13 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.asLiveData
 import androidx.lifecycle.viewModelScope
-import com.konovus.apitesting.data.api.AlphaVantageApi
-import com.konovus.apitesting.data.api.FinageApi
+import com.konovus.apitesting.data.api.YhFinanceApi
 import com.konovus.apitesting.data.local.entities.IntraDayInfo
 import com.konovus.apitesting.data.local.entities.OrderType
 import com.konovus.apitesting.data.local.entities.Stock
 import com.konovus.apitesting.data.local.entities.Transaction
 import com.konovus.apitesting.data.redux.AppState
 import com.konovus.apitesting.data.redux.Store
-import com.konovus.apitesting.data.remote.responses.QuoteResponse
 import com.konovus.apitesting.data.repository.AlphaVantageRepository
 import com.konovus.apitesting.data.repository.MainRepository
 import com.konovus.apitesting.util.Constants.TAG
@@ -33,11 +31,10 @@ import javax.inject.Inject
 
 @HiltViewModel
 class InfoScreenViewModel @Inject constructor(
-    private val savedStateHandle: SavedStateHandle,
+    savedStateHandle: SavedStateHandle,
     private val alphaVantageRepository: AlphaVantageRepository,
     private val repository: MainRepository,
-    private val finageApi: FinageApi,
-    private val alphaVantageApi: AlphaVantageApi,
+    private val yhFinanceApi: YhFinanceApi,
     val store: Store<AppState>
 ) : ViewModel() {
 
@@ -63,33 +60,20 @@ class InfoScreenViewModel @Inject constructor(
     private fun initSetup() {
         viewModelScope.launch {
             stateFlow.value = stateFlow.value.copy(isLoading = true, chartLoading = true)
-            val stock = getLocalStock(symbol, name = savedStateHandle.get<String>("name")!!)
-            stateFlow.value = stateFlow.value.copy(stock = stock)
             store.read {
-                if (it.quoteList.containsKey(symbol)
-                    && it.quoteList[symbol]!!.lastUpdatedTime + TEN_MINUTES < System.currentTimeMillis())
+                if (it.quoteList.map { it.symbol }.contains(symbol)
+                    && it.quoteList.find { it.symbol == symbol }!!.lastUpdatedTime + TEN_MINUTES > System.currentTimeMillis())
                     stateFlow.value =
-                        stateFlow.value.copy(quote = it.quoteList[symbol]!!, isLoading = false)
+                        stateFlow.value.copy(stock = it.quoteList.find { it.symbol == symbol }, isLoading = false)
                 else getCurrentQuote(symbol)
 
-                if (it.chartData.containsKey(symbol + TIME_SPANS[0].first + TIME_SPANS[0].second)
-                    && it.chartData[symbol + TIME_SPANS[0].first + TIME_SPANS[0].second]!!.first().lastUpdatedTime
-                    + TEN_MINUTES < System.currentTimeMillis())
+                if (it.chartData.containsKey(symbol + TIME_SPANS[0].first + TIME_SPANS[0].second))
                     stateFlow.value =
                         stateFlow.value.copy(chartData = it.chartData[symbol + TIME_SPANS[0].first + TIME_SPANS[0].second],
                             chartLoading = false)
                 else getCurrentChartData(symbol)
             }
         }
-    }
-
-    private suspend fun getLocalStock(symbol: String, name: String): Stock {
-        var stock = repository.getLocalStockBySymbol(symbol)
-        if (stock != null)
-            return stock
-        stock = Stock(symbol = symbol, name = name)
-        repository.insertStock(stock)
-        return stock
     }
 
     private fun getCurrentChartData(symbol: String, pos: Int = 0) {
@@ -102,18 +86,10 @@ class InfoScreenViewModel @Inject constructor(
                     map[symbol + TIME_SPANS[pos].first + TIME_SPANS[pos].second] = intraDayList
                     it.copy(chartData = map)
                 }
-                if (pos != 0)
-                    stateFlow.value = stateFlow.value.copy(
-                        chartData = intraDayList.ifEmpty { null },
-                        chartLoading = false,
-                        quote = getUpdatedQuote(intraDayList)
-                    )
-                else
-                    stateFlow.value = stateFlow.value.copy(
-                        chartData = intraDayList.ifEmpty { null },
-                        chartLoading = false,
-                        quote = store.stateFlow.value.quoteList[symbol]
-                    )
+                stateFlow.value = stateFlow.value.copy(
+                    chartData = intraDayList.ifEmpty { null },
+                    chartLoading = false,
+                )
             }
         }
     }
@@ -121,22 +97,16 @@ class InfoScreenViewModel @Inject constructor(
     private fun getCurrentQuote(symbol: String) {
         viewModelScope.launch {
             val quoteResult = repository.makeNetworkCall(symbol) {
-                alphaVantageApi.getQuote(symbol)
+                yhFinanceApi.getStockSummary(symbol)
             }
             processNetworkResult(quoteResult) { quoteResponse ->
-                if (quoteResponse.globalQuote == null)
-                    return@processNetworkResult
                 store.update {
-                    val map = it.quoteList.toMutableMap()
-                    map[symbol] = quoteResponse.globalQuote
-                    it.copy(quoteList = map)
+                    val list = it.quoteList.toMutableList()
+                    list.add(quoteResponse.toStock())
+                    it.copy(quoteList = list)
                 }
-//                repository.updateStock(
-//                    getLocalStock(symbol, "")
-//                        .copy(price = quoteResponse.globalQuote.price.toDouble().toNDecimals(2))
-//                )
                 stateFlow.value = stateFlow.value.copy(
-                    quote = quoteResponse.globalQuote,
+                    stock = quoteResponse.toStock(),
                     isLoading = false,
                     tabLoading = false
                 )
@@ -180,7 +150,8 @@ class InfoScreenViewModel @Inject constructor(
                             stateFlow.value = stateFlow.value.copy(
                                 chartData = it.chartData[symbol + TIME_SPANS[event.pos].first + TIME_SPANS[event.pos].second],
                                 chartLoading = false,
-                                quote = if (event.pos == 0) it.quoteList[symbol] else getUpdatedQuote(
+                                stock = if (event.pos == 0)
+                                    it.quoteList.find { it.symbol == symbol } else getUpdatedStock(
                                     it.chartData[symbol + TIME_SPANS[event.pos].first + TIME_SPANS[event.pos].second]!!
                                 )
                             )
@@ -192,24 +163,10 @@ class InfoScreenViewModel @Inject constructor(
             is InfoScreenEvent.OnTabSelected -> {
                 viewModelScope.launch {
                     stateFlow.value = stateFlow.value.copy(tabLoading = true, tabNr = event.tabNr)
-                    Log.i(TAG, "onEvent tabSelected ${event.tabNr}: ${stateFlow.value.tabLoading}")
                     store.read {
                         when(event.tabNr) {
-                            0 -> {
-                                if (it.quoteList.containsKey(symbol))
-                                    stateFlow.value = stateFlow.value.copy(
-                                        quote = it.quoteList[symbol],
-                                        tabLoading = false)
-                                else getCurrentQuote(symbol)
-
-                            }
-                            1 -> { if (it.detailsStocks.map { it.symbol }.contains(symbol)) {
-                                    stateFlow.value = stateFlow.value.copy(
-                                        detailsStock = it.detailsStocks.find { it.symbol == symbol },
-                                        tabLoading = false
-                                    )
-                                } else getDetailsStock(symbol)
-                            }
+                            0 -> { stateFlow.value = stateFlow.value.copy(tabLoading = false) }
+                            1 -> { stateFlow.value = stateFlow.value.copy(tabLoading = false) }
                             2 -> {
                                 if (it.portfolio != null) {
                                     stateFlow.value = stateFlow.value.copy(tabLoading = false,
@@ -224,30 +181,30 @@ class InfoScreenViewModel @Inject constructor(
     }
 
     private fun getDetailsStock(symbol: String) {
-        viewModelScope.launch {
-            val response = repository.makeNetworkCall("$symbol details") {
-                finageApi.getStockDetails(symbol)
-            }
-            processNetworkResult(response) {
-                store.update { appState ->
-                    val list = appState.detailsStocks.toMutableList()
-                    list.add(it.toStock())
-                    appState.copy(detailsStocks = list)
-                }
-                stateFlow.value = stateFlow.value.copy(
-                    detailsStock = it.toStock(),
-                    tabLoading = false
-                )
-                Log.i(TAG, "getDetailsStock $symbol: ${it.toStock()}")
-            }
-        }
+//        viewModelScope.launch {
+//            val response = repository.makeNetworkCall("$symbol details") {
+//                finageApi.getStockDetails(symbol)
+//            }
+//            processNetworkResult(response) {
+//                store.update { appState ->
+//                    val list = appState.detailsStocks.toMutableList()
+//                    list.add(it.toStock())
+//                    appState.copy(detailsStocks = list)
+//                }
+//                stateFlow.value = stateFlow.value.copy(
+//                    detailsStock = it.toStock(),
+//                    tabLoading = false
+//                )
+//                Log.i(TAG, "getDetailsStock $symbol: ${it.toStock()}")
+//            }
+//        }
     }
 
-    private fun getUpdatedQuote(list: List<IntraDayInfo>): QuoteResponse.GlobalQuote? {
+    private fun getUpdatedStock(list: List<IntraDayInfo>): Stock? {
         val change = (list.last().close - list.first().close).toNDecimals(2)
         val changeInPercent = (change / list.first().close * 100).toNDecimals(2)
-        return stateFlow.value.quote?.copy(
-            change = change.toString(), changePercent = changeInPercent.toString()
+        return stateFlow.value.stock?.copy(
+            chartChange = Stock.ChartChange(change,changeInPercent)
         )
     }
 
@@ -262,7 +219,7 @@ class InfoScreenViewModel @Inject constructor(
         viewModelScope.launch {
             when (result) {
                 is Resource.Success -> {
-                    processBlock(result.data!!)
+                    result.data?.let { processBlock(it) }
                 }
                 is Resource.Loading -> stateFlow.value = stateFlow.value.copy(isLoading = true)
                 is Resource.Error -> {
@@ -276,9 +233,7 @@ class InfoScreenViewModel @Inject constructor(
 
     data class InfoScreenStates(
         val stock: Stock? = null,
-        val quote: QuoteResponse.GlobalQuote? = null,
         val chartData: List<IntraDayInfo>? = null,
-        val detailsStock: Stock? = null,
         val transactions: List<Transaction> = emptyList(),
         val isLoading: Boolean = false,
         val chartLoading: Boolean = false,
@@ -295,5 +250,15 @@ sealed class InfoScreenEvent {
     data class OnChangeChartTimeSpan(val pos: Int): InfoScreenEvent()
     data class OnTabSelected(val tabNr: Int): InfoScreenEvent()
 }
+
+
+//private suspend fun getLocalStock(symbol: String, name: String): Stock {
+//    var stock = repository.getLocalStockBySymbol(symbol)
+//    if (stock != null)
+//        return stock
+//    stock = Stock(symbol = symbol, name = name)
+//    repository.insertStock(stock)
+//    return stock
+//}
 
 

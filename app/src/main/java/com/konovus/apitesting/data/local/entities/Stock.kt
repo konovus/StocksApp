@@ -13,15 +13,36 @@ data class Stock(
     val symbol: String = "",
     val price: Double = 0.0,
     val change: Double = 0.0,
-    val changeInPercentage: Double = 0.0,
-    val changeInPercentageString: String = "",
-    val description: String = "",
-    val exchange: String = "",
-    val industry: String = "",
-    val sector: String = "",
-    val ceo: String = "",
-    val marketcap: String = "",
+    val changePercent: Double = 0.0,
+    val chartChange: ChartChange? = null,
     val isFavorite: Boolean = false,
-    val logo: String = "",
-    val priceLastUpdated: Long = 0L
-): Parcelable
+    val chartOCHLStats: ChartOCHLStats? = null,
+    val descriptionStats: DescriptionStats? = null,
+    val lastUpdatedTime: Long = 0L
+): Parcelable {
+
+    @Parcelize
+    data class ChartChange(
+        val change: Double = 0.0,
+        val changePercent: Double = 0.0,
+    ): Parcelable
+
+    @Parcelize
+    data class ChartOCHLStats(
+        val open: String,
+        val prevClose: String,
+        val high: String,
+        val low: String,
+        val volume: String
+    ): Parcelable
+
+    @Parcelize
+    data class DescriptionStats(
+        val exchange: String,
+        val industry: String,
+        val sector: String,
+        val employees: Int,
+        val marketCap: String,
+        val description: String
+    ): Parcelable
+}

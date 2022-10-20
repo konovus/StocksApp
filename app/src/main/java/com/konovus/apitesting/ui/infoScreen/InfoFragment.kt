@@ -22,6 +22,7 @@ import com.google.android.material.snackbar.Snackbar
 import com.konovus.apitesting.R
 import com.konovus.apitesting.data.local.entities.IntraDayInfo
 import com.konovus.apitesting.data.local.entities.OrderType
+import com.konovus.apitesting.data.local.entities.Stock
 import com.konovus.apitesting.data.local.entities.Transaction
 import com.konovus.apitesting.databinding.BottomSheetBinding
 import com.konovus.apitesting.databinding.InfoFragmentBinding
@@ -41,6 +42,7 @@ class InfoFragment : Fragment(R.layout.info_fragment) {
     private val binding get() = _binding!!
     private val viewModel: InfoScreenViewModel by viewModels()
     private val args: InfoFragmentArgs by navArgs()
+    private lateinit var stock: Stock
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -101,35 +103,36 @@ class InfoFragment : Fragment(R.layout.info_fragment) {
             transactionsTab.root.visibility =
                 if (!state.tabLoading && state.tabNr == 2) View.VISIBLE else View.INVISIBLE
             noTransactions.isVisible = state.transactions.isEmpty() && state.tabNr == 2
-            state.detailsStock?.let{ detailsStock = it }
+            state.stock?.let{
+                this@InfoFragment.stock = it
+                binding.stock = it
+            }
             follow.isSelected = state.stock?.isFavorite == true
 
         }.launchIn(lifecycleScope)
     }
 
     private fun InfoFragmentBinding.bindQuoteData() {
-        viewModel.state.map { it.quote }.distinctUntilChanged().observe(viewLifecycleOwner) { quote ->
-            if (quote == null) return@observe
-            binding.quote = quote
-            if (quote.change() > 0) {
-                priceChangeTv.text = "+$${quote.change()} (${quote.changePercent()}%)"
+        viewModel.state.map { it.stock }.distinctUntilChanged().observe(viewLifecycleOwner) { stock ->
+            if (stock?.chartChange == null) return@observe
+            if (stock.chartChange.change > 0) {
+                priceChangeTv.text = "+$${stock.chartChange.change} (${stock.chartChange.changePercent}%)"
                 priceChangeTv.setTextColor(ContextCompat.getColor(requireContext(), R.color.green))
             } else {
-                priceChangeTv.text = "$${quote.change()} (${quote.changePercent()}%)"
+                priceChangeTv.text = "$${stock.chartChange.change} (${stock.chartChange.changePercent}%)"
                 priceChangeTv.setTextColor(ContextCompat.getColor(requireContext(), R.color.red_orange))
             }
         }
     }
 
     private fun showBottomSheet() {
-        if (binding.quote == null) return
         val bottomSheet = BottomSheetDialog(requireContext())
         val bottomSheetBinding = BottomSheetBinding.inflate(layoutInflater)
         bottomSheet.setContentView(bottomSheetBinding.root)
         bottomSheet.show()
         bottomSheetBinding.apply {
-            symbolTv.text = args.symbol
-            priceTv.text = "$${binding.quote!!.price.toDouble().toNDecimals(2)}"
+            symbolTv.text = stock.symbol
+            priceTv.text = "$${stock.price}"
 
             var orderType = OrderType.Buy
             buySellSwitch.buyBtn.setOnClickListener {
@@ -161,8 +164,8 @@ class InfoFragment : Fragment(R.layout.info_fragment) {
         viewModel.onEvent(
             InfoScreenEvent.OnMarketOrderEvent(
                 Transaction(
-                    price = binding.quote!!.price.toDouble().toNDecimals(2),
-                    symbol = binding.quote!!.symbol,
+                    price = stock.price,
+                    symbol = stock.symbol,
                     amount = sumInput.text.toString().toDouble().toNDecimals(2),
                     dateTime = System.currentTimeMillis(),
                     orderType = orderType
@@ -181,7 +184,7 @@ class InfoFragment : Fragment(R.layout.info_fragment) {
                 sumInputWrap.error = "No shares to sell"
             val amountToSell = text.toString().toDouble()
             val amountOwned = portfolio.stocksToShareAmount.getValue(args.symbol).times(
-                binding.quote!!.price.toDouble()).toNDecimals(2)
+                stock.price).toNDecimals(2)
             if (amountToSell > amountOwned)
                 sumInputWrap.error = "Max to sell is $amountOwned"
             else sumInputWrap.error = null

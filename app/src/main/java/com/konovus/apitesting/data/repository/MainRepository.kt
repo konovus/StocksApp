@@ -37,7 +37,7 @@ class MainRepository @Inject constructor(
         tag: String = "",
         callBlock: suspend () -> Response<T>
     ): Resource<T> {
-        var response: Response<T>? = null
+        val response: Response<T>?
         return try {
             Log.i(TAG, "making a network call for $tag...")
             response = callBlock()
@@ -51,9 +51,9 @@ class MainRepository @Inject constructor(
                 Resource.Success(data = it)
             } ?: Resource.Error("Null response body, try again.")
         } catch (e: JsonSyntaxException) {
-            Resource.Error("Api limit reached, wait 1 minute.", null)
+            Log.i(TAG, "JsonSyntax Error. ${e.message}")
+            Resource.Error("JsonSyntax Error. ${e.message}", null)
         } catch (e: HttpException) {
-            Log.i(TAG, "makeNetworkCall Response: ${response?.code()} , ${response?.errorBody()} , ${response?.body()}")
             Log.i(TAG, "makeNetworkCall Error: $tag , ${e.message} , ${e.localizedMessage}")
             Resource.Error("Couldn't reach the server. Check your internet connection.", null)
         } catch (e: Exception) {
@@ -74,7 +74,7 @@ class MainRepository @Inject constructor(
 
         val updatedList = localList.map { stock ->
             stock.copy(price = responseList.find { it.first == stock.symbol }?.second ?: stock.price,
-                priceLastUpdated = System.currentTimeMillis())
+                lastUpdatedTime = System.currentTimeMillis())
         }
         insertStocks(updatedList)
         var updatedBalance = 0.0

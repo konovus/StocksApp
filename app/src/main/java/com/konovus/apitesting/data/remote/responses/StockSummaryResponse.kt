@@ -1,6 +1,9 @@
 package com.konovus.apitesting.data.remote.responses
 
-data class StockSumaryResponse(
+import com.konovus.apitesting.data.local.entities.Stock
+import com.konovus.apitesting.util.toNDecimals
+
+data class StockSummaryResponse(
     val calendarEvents: CalendarEvents,
     val defaultKeyStatistics: DefaultKeyStatistics,
     val details: Details,
@@ -24,11 +27,40 @@ data class StockSumaryResponse(
     val symbol: String,
     val upgradeDowngradeHistory: UpgradeDowngradeHistory
 ) {
+
+    fun toStock() =
+        Stock(
+            symbol = symbol,
+            name = quoteType.shortName,
+            price = price.regularMarketPrice.raw.toNDecimals(2),
+            change = price.regularMarketChange.raw.toNDecimals(2),
+            changePercent = price.regularMarketChangePercent.raw.toNDecimals(2),
+            chartChange = Stock.ChartChange(
+                change = price.regularMarketChange.raw.toNDecimals(2),
+                changePercent = price.regularMarketChangePercent.raw.toNDecimals(2)),
+            descriptionStats = Stock.DescriptionStats(
+                exchange = price.exchangeName,
+                industry = summaryProfile.industry,
+                sector = summaryProfile.sector,
+                employees = summaryProfile.fullTimeEmployees.toInt(),
+                marketCap = summaryDetail.marketCap.fmt,
+                description = summaryProfile.longBusinessSummary
+            ),
+            chartOCHLStats = Stock.ChartOCHLStats(
+                open = price.regularMarketOpen.fmt,
+                prevClose = price.regularMarketPreviousClose.fmt,
+                high = price.regularMarketDayHigh.fmt,
+                low = price.regularMarketDayLow.fmt,
+                volume = price.regularMarketVolume.fmt
+            ),
+            lastUpdatedTime = System.currentTimeMillis()
+        )
+
     data class CalendarEvents(
         val dividendDate: DividendDate,
         val earnings: Earnings,
         val exDividendDate: ExDividendDate,
-        val maxAge: Int
+        val maxAge: Double
     ) {
         class DividendDate
 
@@ -48,7 +80,7 @@ data class StockSumaryResponse(
 
             data class EarningsDate(
                 val fmt: String,
-                val raw: Int
+                val raw: Double
             )
 
             data class EarningsHigh(
@@ -64,19 +96,19 @@ data class StockSumaryResponse(
             data class RevenueAverage(
                 val fmt: String,
                 val longFmt: String,
-                val raw: Int
+                val raw: Double
             )
 
             data class RevenueHigh(
                 val fmt: String,
                 val longFmt: String,
-                val raw: Int
+                val raw: Double
             )
 
             data class RevenueLow(
                 val fmt: String,
                 val longFmt: String,
-                val raw: Int
+                val raw: Double
             )
         }
 
@@ -85,7 +117,6 @@ data class StockSumaryResponse(
 
     data class DefaultKeyStatistics(
         val `52WeekChange`: WeekChange,
-        val SandP52WeekChange: SandP52WeekChange,
         val annualHoldingsTurnover: AnnualHoldingsTurnover,
         val annualReportExpenseRatio: AnnualReportExpenseRatio,
         val beta: Beta,
@@ -113,7 +144,7 @@ data class StockSumaryResponse(
         val lastSplitDate: LastSplitDate,
         val lastSplitFactor: String,
         val legalType: Any,
-        val maxAge: Int,
+        val maxAge: Double,
         val morningStarOverallRating: MorningStarOverallRating,
         val morningStarRiskRating: MorningStarRiskRating,
         val mostRecentQuarter: MostRecentQuarter,
@@ -143,11 +174,6 @@ data class StockSumaryResponse(
             val raw: Double
         )
 
-        data class SandP52WeekChange(
-            val fmt: String,
-            val raw: Double
-        )
-
         class AnnualHoldingsTurnover
 
         class AnnualReportExpenseRatio
@@ -166,7 +192,7 @@ data class StockSumaryResponse(
 
         data class DateShortInterest(
             val fmt: String,
-            val raw: Int
+            val raw: Double
         )
 
         class EarningsQuarterlyGrowth
@@ -184,7 +210,7 @@ data class StockSumaryResponse(
         data class EnterpriseValue(
             val fmt: String,
             val longFmt: String,
-            val raw: Int
+            val raw: Double
         )
 
         class FiveYearAverageReturn
@@ -192,7 +218,7 @@ data class StockSumaryResponse(
         data class FloatShares(
             val fmt: String,
             val longFmt: String,
-            val raw: Int
+            val raw: Double
         )
 
         data class ForwardEps(
@@ -220,7 +246,7 @@ data class StockSumaryResponse(
         data class ImpliedSharesOutstanding(
             val fmt: Any,
             val longFmt: String,
-            val raw: Int
+            val raw: Double
         )
 
         class LastCapGain
@@ -231,12 +257,12 @@ data class StockSumaryResponse(
 
         data class LastFiscalYearEnd(
             val fmt: String,
-            val raw: Int
+            val raw: Double
         )
 
         data class LastSplitDate(
             val fmt: String,
-            val raw: Int
+            val raw: Double
         )
 
         class MorningStarOverallRating
@@ -245,18 +271,18 @@ data class StockSumaryResponse(
 
         data class MostRecentQuarter(
             val fmt: String,
-            val raw: Int
+            val raw: Double
         )
 
         data class NetIncomeToCommon(
             val fmt: String,
             val longFmt: String,
-            val raw: Int
+            val raw: Double
         )
 
         data class NextFiscalYearEnd(
             val fmt: String,
-            val raw: Int
+            val raw: Double
         )
 
         data class PegRatio(
@@ -267,7 +293,7 @@ data class StockSumaryResponse(
         data class PriceHint(
             val fmt: String,
             val longFmt: String,
-            val raw: Int
+            val raw: Double
         )
 
         data class PriceToBook(
@@ -287,7 +313,7 @@ data class StockSumaryResponse(
         data class SharesOutstanding(
             val fmt: String,
             val longFmt: String,
-            val raw: Int
+            val raw: Double
         )
 
         data class SharesPercentSharesOut(
@@ -298,18 +324,18 @@ data class StockSumaryResponse(
         data class SharesShort(
             val fmt: String,
             val longFmt: String,
-            val raw: Int
+            val raw: Double
         )
 
         data class SharesShortPreviousMonthDate(
             val fmt: String,
-            val raw: Int
+            val raw: Double
         )
 
         data class SharesShortPriorMonth(
             val fmt: String,
             val longFmt: String,
-            val raw: Int
+            val raw: Double
         )
 
         class ShortPercentOfFloat
@@ -339,12 +365,12 @@ data class StockSumaryResponse(
         val earningsChart: EarningsChart,
         val financialCurrency: String,
         val financialsChart: FinancialsChart,
-        val maxAge: Int
+        val maxAge: Double
     ) {
         data class EarningsChart(
             val currentQuarterEstimate: CurrentQuarterEstimate,
             val currentQuarterEstimateDate: String,
-            val currentQuarterEstimateYear: Int,
+            val currentQuarterEstimateYear: Double,
             val earningsDate: List<EarningsDate>,
             val quarterly: List<Quarterly>
         ) {
@@ -355,7 +381,7 @@ data class StockSumaryResponse(
 
             data class EarningsDate(
                 val fmt: String,
-                val raw: Int
+                val raw: Double
             )
 
             data class Quarterly(
@@ -387,31 +413,31 @@ data class StockSumaryResponse(
                 data class Earnings(
                     val fmt: String,
                     val longFmt: String,
-                    val raw: Int
+                    val raw: Double
                 )
 
                 data class Revenue(
                     val fmt: String,
                     val longFmt: String,
-                    val raw: Int
+                    val raw: Double
                 )
             }
 
             data class Yearly(
-                val date: Int,
+                val date: Double,
                 val earnings: Earnings,
                 val revenue: Revenue
             ) {
                 data class Earnings(
                     val fmt: String,
                     val longFmt: String,
-                    val raw: Int
+                    val raw: Double
                 )
 
                 data class Revenue(
                     val fmt: String,
                     val longFmt: String,
-                    val raw: Int
+                    val raw: Double
                 )
             }
         }
@@ -430,7 +456,7 @@ data class StockSumaryResponse(
         val freeCashflow: FreeCashflow,
         val grossMargins: GrossMargins,
         val grossProfits: GrossProfits,
-        val maxAge: Int,
+        val maxAge: Double,
         val numberOfAnalystOpinions: NumberOfAnalystOpinions,
         val operatingCashflow: OperatingCashflow,
         val operatingMargins: OperatingMargins,
@@ -471,7 +497,7 @@ data class StockSumaryResponse(
         data class Ebitda(
             val fmt: String,
             val longFmt: String,
-            val raw: Int
+            val raw: Double
         )
 
         data class EbitdaMargins(
@@ -482,7 +508,7 @@ data class StockSumaryResponse(
         data class FreeCashflow(
             val fmt: String,
             val longFmt: String,
-            val raw: Int
+            val raw: Double
         )
 
         data class GrossMargins(
@@ -493,19 +519,19 @@ data class StockSumaryResponse(
         data class GrossProfits(
             val fmt: String,
             val longFmt: String,
-            val raw: Int
+            val raw: Double
         )
 
         data class NumberOfAnalystOpinions(
             val fmt: String,
             val longFmt: String,
-            val raw: Int
+            val raw: Double
         )
 
         data class OperatingCashflow(
             val fmt: String,
             val longFmt: String,
-            val raw: Int
+            val raw: Double
         )
 
         data class OperatingMargins(
@@ -550,12 +576,12 @@ data class StockSumaryResponse(
 
         data class TargetHighPrice(
             val fmt: String,
-            val raw: Int
+            val raw: Double
         )
 
         data class TargetLowPrice(
             val fmt: String,
-            val raw: Int
+            val raw: Double
         )
 
         data class TargetMeanPrice(
@@ -565,13 +591,13 @@ data class StockSumaryResponse(
 
         data class TargetMedianPrice(
             val fmt: String,
-            val raw: Int
+            val raw: Double
         )
 
         data class TotalCash(
             val fmt: String,
             val longFmt: String,
-            val raw: Int
+            val raw: Double
         )
 
         data class TotalCashPerShare(
@@ -582,27 +608,27 @@ data class StockSumaryResponse(
         data class TotalDebt(
             val fmt: String,
             val longFmt: String,
-            val raw: Int
+            val raw: Double
         )
 
         data class TotalRevenue(
             val fmt: String,
             val longFmt: String,
-            val raw: Int
+            val raw: Double
         )
     }
 
     data class FinancialsTemplate(
         val code: String,
-        val maxAge: Int
+        val maxAge: Double
     )
 
     data class FundOwnership(
-        val maxAge: Int,
+        val maxAge: Double,
         val ownershipList: List<Ownership>
     ) {
         data class Ownership(
-            val maxAge: Int,
+            val maxAge: Double,
             val organization: String,
             val pctHeld: PctHeld,
             val position: Position,
@@ -617,29 +643,29 @@ data class StockSumaryResponse(
             data class Position(
                 val fmt: String,
                 val longFmt: String,
-                val raw: Int
+                val raw: Double
             )
 
             data class ReportDate(
                 val fmt: String,
-                val raw: Int
+                val raw: Double
             )
 
             data class Value(
                 val fmt: String,
                 val longFmt: String,
-                val raw: Int
+                val raw: Double
             )
         }
     }
 
     data class InsiderHolders(
         val holders: List<Holder>,
-        val maxAge: Int
+        val maxAge: Double
     ) {
         data class Holder(
             val latestTransDate: LatestTransDate,
-            val maxAge: Int,
+            val maxAge: Double,
             val name: String,
             val positionDirect: PositionDirect,
             val positionDirectDate: PositionDirectDate,
@@ -651,42 +677,42 @@ data class StockSumaryResponse(
         ) {
             data class LatestTransDate(
                 val fmt: String,
-                val raw: Int
+                val raw: Double
             )
 
             data class PositionDirect(
                 val fmt: String,
                 val longFmt: String,
-                val raw: Int
+                val raw: Double
             )
 
             data class PositionDirectDate(
                 val fmt: String,
-                val raw: Int
+                val raw: Double
             )
 
             data class PositionIndirect(
                 val fmt: String,
                 val longFmt: String,
-                val raw: Int
+                val raw: Double
             )
 
             data class PositionIndirectDate(
                 val fmt: String,
-                val raw: Int
+                val raw: Double
             )
         }
     }
 
     data class InsiderTransactions(
-        val maxAge: Int,
+        val maxAge: Double,
         val transactions: List<Transaction>
     ) {
         data class Transaction(
             val filerName: String,
             val filerRelation: String,
             val filerUrl: String,
-            val maxAge: Int,
+            val maxAge: Double,
             val moneyText: String,
             val ownership: String,
             val shares: Shares,
@@ -697,28 +723,28 @@ data class StockSumaryResponse(
             data class Shares(
                 val fmt: String,
                 val longFmt: String,
-                val raw: Int
+                val raw: Double
             )
 
             data class StartDate(
                 val fmt: String,
-                val raw: Int
+                val raw: Double
             )
 
             data class Value(
                 val fmt: String,
                 val longFmt: String,
-                val raw: Int
+                val raw: Double
             )
         }
     }
 
     data class InstitutionOwnership(
-        val maxAge: Int,
+        val maxAge: Double,
         val ownershipList: List<Ownership>
     ) {
         data class Ownership(
-            val maxAge: Int,
+            val maxAge: Double,
             val organization: String,
             val pctHeld: PctHeld,
             val position: Position,
@@ -733,25 +759,25 @@ data class StockSumaryResponse(
             data class Position(
                 val fmt: String,
                 val longFmt: String,
-                val raw: Int
+                val raw: Double
             )
 
             data class ReportDate(
                 val fmt: String,
-                val raw: Int
+                val raw: Double
             )
 
             data class Value(
                 val fmt: String,
                 val longFmt: String,
-                val raw: Int
+                val raw: Double
             )
         }
     }
 
     data class MajorDirectHolders(
         val holders: List<Any>,
-        val maxAge: Int
+        val maxAge: Double
     )
 
     data class MajorHoldersBreakdown(
@@ -759,7 +785,7 @@ data class StockSumaryResponse(
         val institutionsCount: InstitutionsCount,
         val institutionsFloatPercentHeld: InstitutionsFloatPercentHeld,
         val institutionsPercentHeld: InstitutionsPercentHeld,
-        val maxAge: Int
+        val maxAge: Double
     ) {
         data class InsidersPercentHeld(
             val fmt: String,
@@ -769,7 +795,7 @@ data class StockSumaryResponse(
         data class InstitutionsCount(
             val fmt: String,
             val longFmt: String,
-            val raw: Int
+            val raw: Double
         )
 
         data class InstitutionsFloatPercentHeld(
@@ -787,7 +813,7 @@ data class StockSumaryResponse(
         val buyInfoCount: BuyInfoCount,
         val buyInfoShares: BuyInfoShares,
         val buyPercentInsiderShares: BuyPercentInsiderShares,
-        val maxAge: Int,
+        val maxAge: Double,
         val netInfoCount: NetInfoCount,
         val netInfoShares: NetInfoShares,
         val netPercentInsiderShares: NetPercentInsiderShares,
@@ -798,13 +824,13 @@ data class StockSumaryResponse(
         data class BuyInfoCount(
             val fmt: String,
             val longFmt: String,
-            val raw: Int
+            val raw: Double
         )
 
         data class BuyInfoShares(
             val fmt: String,
             val longFmt: String,
-            val raw: Int
+            val raw: Double
         )
 
         data class BuyPercentInsiderShares(
@@ -815,13 +841,13 @@ data class StockSumaryResponse(
         data class NetInfoCount(
             val fmt: String,
             val longFmt: String,
-            val raw: Int
+            val raw: Double
         )
 
         data class NetInfoShares(
             val fmt: String,
             val longFmt: String,
-            val raw: Int
+            val raw: Double
         )
 
         data class NetPercentInsiderShares(
@@ -832,19 +858,19 @@ data class StockSumaryResponse(
         data class SellInfoCount(
             val fmt: Any,
             val longFmt: String,
-            val raw: Int
+            val raw: Double
         )
 
         data class TotalInsiderShares(
             val fmt: String,
             val longFmt: String,
-            val raw: Int
+            val raw: Double
         )
     }
 
     data class PageViews(
         val longTermTrend: String,
-        val maxAge: Int,
+        val maxAge: Double,
         val midTermTrend: String,
         val shortTermTrend: String
     )
@@ -856,14 +882,14 @@ data class StockSumaryResponse(
         val currency: String,
         val currencySymbol: String,
         val exchange: String,
-        val exchangeDataDelayedBy: Int,
+        val exchangeDataDelayedBy: Double,
         val exchangeName: String,
         val fromCurrency: Any,
         val lastMarket: Any,
         val longName: String,
         val marketCap: MarketCap,
         val marketState: String,
-        val maxAge: Int,
+        val maxAge: Double,
         val openInterest: OpenInterest,
         val postMarketChange: PostMarketChange,
         val postMarketPrice: PostMarketPrice,
@@ -871,7 +897,7 @@ data class StockSumaryResponse(
         val preMarketChangePercent: PreMarketChangePercent,
         val preMarketPrice: PreMarketPrice,
         val preMarketSource: String,
-        val preMarketTime: Int,
+        val preMarketTime: Double,
         val priceHint: PriceHint,
         val quoteSourceName: String,
         val quoteType: String,
@@ -883,7 +909,7 @@ data class StockSumaryResponse(
         val regularMarketPreviousClose: RegularMarketPreviousClose,
         val regularMarketPrice: RegularMarketPrice,
         val regularMarketSource: String,
-        val regularMarketTime: Int,
+        val regularMarketTime: Double,
         val regularMarketVolume: RegularMarketVolume,
         val shortName: String,
         val strikePrice: StrikePrice,
@@ -896,13 +922,13 @@ data class StockSumaryResponse(
         data class AverageDailyVolume10Day(
             val fmt: String,
             val longFmt: String,
-            val raw: Int
+            val raw: Double
         )
 
         data class AverageDailyVolume3Month(
             val fmt: String,
             val longFmt: String,
-            val raw: Int
+            val raw: Double
         )
 
         class CirculatingSupply
@@ -910,7 +936,7 @@ data class StockSumaryResponse(
         data class MarketCap(
             val fmt: String,
             val longFmt: String,
-            val raw: Int
+            val raw: Double
         )
 
         class OpenInterest
@@ -937,7 +963,7 @@ data class StockSumaryResponse(
         data class PriceHint(
             val fmt: String,
             val longFmt: String,
-            val raw: Int
+            val raw: Double
         )
 
         data class RegularMarketChange(
@@ -978,7 +1004,7 @@ data class StockSumaryResponse(
         data class RegularMarketVolume(
             val fmt: String,
             val longFmt: String,
-            val raw: Int
+            val raw: Double
         )
 
         class StrikePrice
@@ -1003,16 +1029,16 @@ data class StockSumaryResponse(
     )
 
     data class RecommendationTrend(
-        val maxAge: Int,
+        val maxAge: Double,
         val trend: List<Trend>
     ) {
         data class Trend(
-            val buy: Int,
-            val hold: Int,
+            val buy: Double,
+            val hold: Double,
             val period: String,
-            val sell: Int,
-            val strongBuy: Int,
-            val strongSell: Int
+            val sell: Double,
+            val strongBuy: Double,
+            val strongSell: Double
         )
     }
 
@@ -1042,7 +1068,7 @@ data class StockSumaryResponse(
         val fromCurrency: Any,
         val lastMarket: Any,
         val marketCap: MarketCap,
-        val maxAge: Int,
+        val maxAge: Double,
         val maxSupply: MaxSupply,
         val navPrice: NavPrice,
         val `open`: Open,
@@ -1078,25 +1104,25 @@ data class StockSumaryResponse(
         data class AskSize(
             val fmt: String,
             val longFmt: String,
-            val raw: Int
+            val raw: Double
         )
 
         data class AverageDailyVolume10Day(
             val fmt: String,
             val longFmt: String,
-            val raw: Int
+            val raw: Double
         )
 
         data class AverageVolume(
             val fmt: String,
             val longFmt: String,
-            val raw: Int
+            val raw: Double
         )
 
         data class AverageVolume10days(
             val fmt: String,
             val longFmt: String,
-            val raw: Int
+            val raw: Double
         )
 
         data class Beta(
@@ -1112,7 +1138,7 @@ data class StockSumaryResponse(
         data class BidSize(
             val fmt: String,
             val longFmt: String,
-            val raw: Int
+            val raw: Double
         )
 
         class CirculatingSupply
@@ -1160,7 +1186,7 @@ data class StockSumaryResponse(
         data class MarketCap(
             val fmt: String,
             val longFmt: String,
-            val raw: Int
+            val raw: Double
         )
 
         class MaxSupply
@@ -1176,7 +1202,7 @@ data class StockSumaryResponse(
 
         data class PayoutRatio(
             val fmt: String,
-            val raw: Int
+            val raw: Double
         )
 
         data class PreviousClose(
@@ -1187,7 +1213,7 @@ data class StockSumaryResponse(
         data class PriceHint(
             val fmt: String,
             val longFmt: String,
-            val raw: Int
+            val raw: Double
         )
 
         data class PriceToSalesTrailing12Months(
@@ -1218,7 +1244,7 @@ data class StockSumaryResponse(
         data class RegularMarketVolume(
             val fmt: String,
             val longFmt: String,
-            val raw: Int
+            val raw: Double
         )
 
         class StartDate
@@ -1229,12 +1255,12 @@ data class StockSumaryResponse(
 
         data class TrailingAnnualDividendRate(
             val fmt: String,
-            val raw: Int
+            val raw: Double
         )
 
         data class TrailingAnnualDividendYield(
             val fmt: String,
-            val raw: Int
+            val raw: Double
         )
 
         data class TwoHundredDayAverage(
@@ -1245,7 +1271,7 @@ data class StockSumaryResponse(
         data class Volume(
             val fmt: String,
             val longFmt: String,
-            val raw: Int
+            val raw: Double
         )
 
         class Volume24Hr
@@ -1263,10 +1289,10 @@ data class StockSumaryResponse(
         val city: String,
         val companyOfficers: List<Any>,
         val country: String,
-        val fullTimeEmployees: Int,
+        val fullTimeEmployees: Double,
         val industry: String,
         val longBusinessSummary: String,
-        val maxAge: Int,
+        val maxAge: Double,
         val phone: String,
         val sector: String,
         val website: String,
@@ -1275,11 +1301,11 @@ data class StockSumaryResponse(
 
     data class UpgradeDowngradeHistory(
         val history: List<History>,
-        val maxAge: Int
+        val maxAge: Double
     ) {
         data class History(
             val action: String,
-            val epochGradeDate: Int,
+            val epochGradeDate: Double,
             val firm: String,
             val fromGrade: String,
             val toGrade: String

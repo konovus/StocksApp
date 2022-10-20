@@ -7,16 +7,13 @@
     <data>
         <import type="android.view.View"/>
         <variable
-            name="quote"
-            type="com.konovus.apitesting.data.remote.responses.QuoteResponse.GlobalQuote" />
-        <variable
             name="selected"
             type="Integer" />
         <variable
             name="tab_nr"
             type="Integer" />
         <variable
-            name="detailsStock"
+            name="stock"
             type="com.konovus.apitesting.data.local.entities.Stock" />
     </data>
 
@@ -119,7 +116,7 @@
                         android:textSize="32sp"
                         app:layout_constraintStart_toStartOf="@id/symbol_tv"
                         app:layout_constraintTop_toBottomOf="@id/name_tv"
-                        android:text="@{`$` + quote.price()}"
+                        android:text="@{`$` + stock.price}"
                         tools:text="$152.04" />
 
                     <TextView
@@ -241,7 +238,7 @@
 
                     <include layout="@layout/statistics_tab_page"
                         android:id="@+id/statistics_tab"
-                        app:quote="@{quote}"
+                        app:stock="@{stock}"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         app:layout_constraintTop_toBottomOf="@id/tab_layout" />
@@ -251,7 +248,7 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         app:layout_constraintTop_toBottomOf="@id/tab_layout"
-                        app:stock="@{detailsStock}"
+                        app:stock="@{stock}"
                         />
 
                     <include layout="@layout/transactions_tab_page"

@@ -47,15 +47,35 @@ class Converters {
         return adapter.fromJson(json)!!
     }
 
-//    @TypeConverter
-//    fun fromTransaction(transaction: Transaction): String {
-//        return moshi.adapter(Transaction::class.java).toJson(transaction)
-//    }
-//
-//    @TypeConverter
-//    fun toTransaction(json: String): Transaction {
-//        return moshi.adapter(Transaction::class.java).fromJson(json)!!
-//    }
+    @TypeConverter
+    fun fromChartChange(chartChange: Stock.ChartChange?): String {
+        return moshi.adapter(Stock.ChartChange::class.java).toJson(chartChange)
+    }
+
+    @TypeConverter
+    fun toChartChange(json: String): Stock.ChartChange? {
+        return moshi.adapter(Stock.ChartChange::class.java).fromJson(json)
+    }
+
+    @TypeConverter
+    fun fromChartOCHLStats(chartOCHLStats: Stock.ChartOCHLStats?): String {
+        return moshi.adapter(Stock.ChartOCHLStats::class.java).toJson(chartOCHLStats)
+    }
+
+    @TypeConverter
+    fun toChartOCHLStats(json: String): Stock.ChartOCHLStats? {
+        return moshi.adapter(Stock.ChartOCHLStats::class.java).fromJson(json)
+    }
+
+    @TypeConverter
+    fun fromDescriptionStats(descriptionStats: Stock.DescriptionStats?): String {
+        return moshi.adapter(Stock.DescriptionStats::class.java).toJson(descriptionStats)
+    }
+
+    @TypeConverter
+    fun toDescriptionStats(json: String): Stock.DescriptionStats? {
+        return moshi.adapter(Stock.DescriptionStats::class.java).fromJson(json)
+    }
 
 //    @TypeConverter
 //    fun fromIntraDayList(data: List<IntraDayInfo>): String{

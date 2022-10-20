@@ -85,7 +85,7 @@ class MainViewModel @Inject constructor(
             val responseList = result.data.quoteResponse.result.map { Pair(it.symbol, it.regularMarketPrice) }
             val updatedList = localList.map { stock ->
                 stock.copy(price = responseList.find { it.first == stock.symbol }?.second ?: stock.price,
-                    priceLastUpdated = System.currentTimeMillis())
+                    lastUpdatedTime = System.currentTimeMillis())
             }
             repository.insertStocks(updatedList)
             stateFlow.value = stateFlow.value.copy(favoritesLoading = false)

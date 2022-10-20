@@ -18,7 +18,7 @@ class NetworkConnectionObserver(
         .addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
         .addTransportType(NetworkCapabilities.TRANSPORT_WIFI)
         .build()
-    private var switchBack = true
+    private var switchBack = false
     private val _connection = MutableStateFlow(NetworkStatus.Unavailable)
     val connection: LiveData<NetworkStatus> = _connection.asLiveData()
 

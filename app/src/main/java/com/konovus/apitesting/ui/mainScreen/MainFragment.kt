@@ -53,7 +53,7 @@ class MainFragment : Fragment(R.layout.main_fragment),
             addStocksTv.isVisible = stocks.isEmpty()
             addStocksBtn.isVisible = stocks.isEmpty()
             if (stocks.isEmpty()) return@observe
-            if (stocks.minOf { it.priceLastUpdated } + TEN_MINUTES < System.currentTimeMillis())
+            if (stocks.minOf { it.lastUpdatedTime } + TEN_MINUTES < System.currentTimeMillis())
                 viewModel.updatePricesForFavorites(stocks)
             Log.i(TAG, "favorites list MF: ${stocks.size}")
             val favoritesAdapter = FavoritesAdapter(this@MainFragment)
@@ -111,7 +111,7 @@ class MainFragment : Fragment(R.layout.main_fragment),
                     portfolioChangeBalanceTv.text = "-$${ it.change.toString().substring(1)} / ${it.changeInPercentage}%"
                     portfolioChangeBalanceTv.setTextColor(ContextCompat.getColor(requireContext(), R.color.red_orange))
                 }
-                if (it.lastUpdatedTime + TEN_MINUTES < System.currentTimeMillis() && it.stocksToShareAmount.isNotEmpty())
+                if (it.lastUpdatedTime + TEN_MINUTES * 1000 < System.currentTimeMillis() && it.stocksToShareAmount.isNotEmpty())
                     viewModel.onEvent(MainScreenEvents.OnRequestPortfolioUpdate(it))
             }
         }
