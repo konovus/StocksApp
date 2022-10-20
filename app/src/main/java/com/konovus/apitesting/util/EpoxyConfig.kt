@@ -5,5 +5,6 @@ import com.airbnb.epoxy.PackageModelViewConfig
 import com.konovus.apitesting.R
 
 @PackageModelViewConfig(rClass = R::class)
-@EpoxyDataBindingLayouts(value = [R.layout.transactions_item, R.layout.portfolio_stock_item])
+@EpoxyDataBindingLayouts(value = [R.layout.transactions_item, R.layout.portfolio_stock_item,
+                        R.layout.trending_item])
 interface EpoxyConfig

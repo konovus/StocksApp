@@ -6,7 +6,6 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.asLiveData
 import androidx.lifecycle.viewModelScope
 import com.konovus.apitesting.R
-import com.konovus.apitesting.data.api.FinageApi
 import com.konovus.apitesting.data.api.YhFinanceApi
 import com.konovus.apitesting.data.local.entities.IntraDayInfo
 import com.konovus.apitesting.data.local.entities.Portfolio
@@ -24,7 +23,6 @@ import javax.inject.Inject
 @HiltViewModel
 class MainViewModel @Inject constructor(
     private val repository: MainRepository,
-    private val finageApi: FinageApi,
     private val yhFinanceApi: YhFinanceApi,
     val store: Store<AppState>,
     app: Application
@@ -42,7 +40,7 @@ class MainViewModel @Inject constructor(
     private fun initSetup() {
         getOrCreateDefaultPortfolio()
 //        getFavoritesStocks()
-//        getTrendingStocks()
+        getTrendingStocks()
     }
 
     private fun observeConnectivity() {
@@ -66,10 +64,14 @@ class MainViewModel @Inject constructor(
         viewModelScope.launch {
             stateFlow.value = stateFlow.value.copy(trendingLoading = true)
             val result = repository.makeNetworkCall("trending") {
-                finageApi.getMostActive()
+                yhFinanceApi.getTrendingStocks()
             }
             processNetworkResult(result) { data ->
-                store.update { appState -> appState.copy(trendingStocks = data.map { it.toStock() }) }
+                store.update { appState ->
+                    appState.copy(
+                        trendingStocks = data.finance.result.first().quotes.map { it.toStock() }
+                    )
+                }
                 stateFlow.value = stateFlow.value.copy(trendingLoading = false)
             }
         }

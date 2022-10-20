@@ -13,9 +13,11 @@ import androidx.lifecycle.map
 import androidx.navigation.fragment.findNavController
 import com.google.android.material.snackbar.Snackbar
 import com.konovus.apitesting.R
+import com.konovus.apitesting.TrendingItemBindingModelBuilder
 import com.konovus.apitesting.data.local.entities.FavoritesRVItem
 import com.konovus.apitesting.data.local.entities.Stock
 import com.konovus.apitesting.databinding.MainFragmentBinding
+import com.konovus.apitesting.trendingItem
 import com.konovus.apitesting.ui.MainActivity
 import com.konovus.apitesting.util.Constants.TAG
 import com.konovus.apitesting.util.Constants.TEN_MINUTES
@@ -28,8 +30,7 @@ import kotlinx.coroutines.launch
 
 
 @AndroidEntryPoint
-class MainFragment : Fragment(R.layout.main_fragment),
-    TrendingAdapter.OnItemClickListener, FavoritesAdapter.OnItemClickListener {
+class MainFragment : Fragment(R.layout.main_fragment), FavoritesAdapter.OnItemClickListener {
 
     private var _binding: MainFragmentBinding? = null
     private val binding get() = _binding!!
@@ -80,9 +81,11 @@ class MainFragment : Fragment(R.layout.main_fragment),
     private fun MainFragmentBinding.bindTrendingData() {
         viewModel.store.stateFlow.map { it.trendingStocks }.asLiveData().observe(viewLifecycleOwner) {
                 if (it.isNotEmpty()) {
-                    val trendingAdapter = TrendingAdapter(this@MainFragment)
-                    recyclerViewTrending.adapter = trendingAdapter
-                    trendingAdapter.submitList(it)
+                    recyclerViewTrending.withModels {
+                        it.forEach {
+                            trendingItem { setupEachTrendingItem(it) }
+                        }
+                    }
                 }
             }
 
@@ -92,6 +95,15 @@ class MainFragment : Fragment(R.layout.main_fragment),
             if (it)
                 trendingShimmerLayout.root.startShimmer()
             else trendingShimmerLayout.root.stopShimmer()
+        }
+    }
+
+    private fun TrendingItemBindingModelBuilder.setupEachTrendingItem(stock: Stock) {
+        id(stock.symbol)
+        stock(stock)
+        onClick { _ ->
+            val action = MainFragmentDirections.actionMainFragmentToInfoFragment(stock.name, stock.symbol)
+            findNavController().navigate(action)
         }
     }
 
@@ -131,11 +143,6 @@ class MainFragment : Fragment(R.layout.main_fragment),
         binding.addStocksBtn.setOnClickListener {
             (activity as? MainActivity)?.navigateToTab(R.id.searchFragment)
         }
-    }
-
-    override fun onTrendingItemClick(stock: Stock) {
-        val action = MainFragmentDirections.actionMainFragmentToInfoFragment(stock.name, stock.symbol)
-        findNavController().navigate(action)
     }
 
     override fun onFavoriteItemClick(stock: Stock) {

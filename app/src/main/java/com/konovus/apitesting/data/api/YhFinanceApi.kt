@@ -2,7 +2,8 @@ package com.konovus.apitesting.data.api
 
 import com.konovus.apitesting.data.remote.responses.MultipleQuotesResponse
 import com.konovus.apitesting.data.remote.responses.StockSummaryResponse
-import com.konovus.apitesting.util.Constants
+import com.konovus.apitesting.data.remote.responses.TrendingStocksResponse
+import com.konovus.apitesting.util.Constants.API_KEY_YH_FINANCE
 import retrofit2.Response
 import retrofit2.http.GET
 import retrofit2.http.Headers
@@ -10,7 +11,7 @@ import retrofit2.http.Query
 
 interface YhFinanceApi {
 
-    @Headers("X-RapidAPI-Key: ${Constants.API_KEY_YH_FINANCE}",
+    @Headers("X-RapidAPI-Key: $API_KEY_YH_FINANCE",
             "X-RapidAPI-Host: yh-finance.p.rapidapi.com")
     @GET("market/v2/get-quotes")
     suspend fun getMultipleQuotes(
@@ -18,11 +19,16 @@ interface YhFinanceApi {
         @Query("symbols") region: String = "US",
     ): Response<MultipleQuotesResponse>
 
-    @Headers("X-RapidAPI-Key: ${Constants.API_KEY_YH_FINANCE}",
+    @Headers("X-RapidAPI-Key: $API_KEY_YH_FINANCE",
             "X-RapidAPI-Host: yh-finance.p.rapidapi.com")
     @GET("stock/v2/get-summary")
     suspend fun getStockSummary(
         @Query("symbol") symbol: String,
     ): Response<StockSummaryResponse>
+
+    @Headers("X-RapidAPI-Key: $API_KEY_YH_FINANCE",
+            "X-RapidAPI-Host: yh-finance.p.rapidapi.com")
+    @GET("market/get-trending-tickers")
+    suspend fun getTrendingStocks(): Response<TrendingStocksResponse>
 
 }

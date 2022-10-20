@@ -84,12 +84,14 @@ class InfoScreenViewModel @Inject constructor(
                 store.update {
                     val map = it.chartData.toMutableMap()
                     map[symbol + TIME_SPANS[pos].first + TIME_SPANS[pos].second] = intraDayList
+
+                    stateFlow.value = stateFlow.value.copy(
+                        chartData = intraDayList.ifEmpty { null },
+                        chartLoading = false,
+                        stock = getUpdatedStock(map[symbol + TIME_SPANS[pos].first + TIME_SPANS[pos].second]!!)
+                    )
                     it.copy(chartData = map)
                 }
-                stateFlow.value = stateFlow.value.copy(
-                    chartData = intraDayList.ifEmpty { null },
-                    chartLoading = false,
-                )
             }
         }
     }

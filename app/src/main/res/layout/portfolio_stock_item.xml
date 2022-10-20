@@ -17,6 +17,9 @@
         <variable
             name="changePercentValue"
             type="Double" />
+        <variable
+            name="onClick"
+            type="android.view.View.OnClickListener" />
     </data>
 
     <androidx.cardview.widget.CardView
@@ -24,6 +27,7 @@
         android:layout_width="match_parent"
         app:cardCornerRadius="5dp"
         android:layout_marginTop="10dp"
+        android:onClick="@{onClick}"
         android:backgroundTint="@color/dark_blue">
 
         <androidx.constraintlayout.widget.ConstraintLayout

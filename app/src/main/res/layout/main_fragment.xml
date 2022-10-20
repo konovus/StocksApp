@@ -187,7 +187,7 @@
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent" />
 
-        <androidx.recyclerview.widget.RecyclerView
+        <com.airbnb.epoxy.EpoxyRecyclerView
             android:id="@+id/recycler_view_trending"
             android:layout_width="match_parent"
             android:layout_height="0dp"

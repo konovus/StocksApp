@@ -17,6 +17,7 @@ class NetworkConnectionObserver(
     private val networkRequest = NetworkRequest.Builder()
         .addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
         .addTransportType(NetworkCapabilities.TRANSPORT_WIFI)
+        .addTransportType(NetworkCapabilities.TRANSPORT_CELLULAR)
         .build()
     private var switchBack = false
     private val _connection = MutableStateFlow(NetworkStatus.Unavailable)

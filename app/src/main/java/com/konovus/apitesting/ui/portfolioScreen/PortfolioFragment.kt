@@ -26,8 +26,7 @@ import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
 
 @AndroidEntryPoint
-class PortfolioFragment: Fragment(R.layout.portfolio_fragment),
-    PortfolioStocksAdapter.OnItemClickListener {
+class PortfolioFragment: Fragment(R.layout.portfolio_fragment) {
 
     private var _binding: PortfolioFragmentBinding? = null
     private val binding get() = _binding!!
@@ -51,6 +50,7 @@ class PortfolioFragment: Fragment(R.layout.portfolio_fragment),
                 binding.bindPortfolioData(state.portfolio)
                 binding.noStocksOwnedTv.isVisible = state.stocks.isEmpty()
                 binding.addStocksBtn.isVisible = state.stocks.isEmpty()
+                binding.stocksNr.text = "${state.stocks.size}"
                 binding.recyclerView.withModels {
                     state.stocks.forEach { stock ->
                         portfolioStockItem {
@@ -75,6 +75,10 @@ class PortfolioFragment: Fragment(R.layout.portfolio_fragment),
         val changeInPercent = ((currentAmount - initialAmount) / initialAmount * 100).toNDecimals(2)
         changePercentValue(changeInPercent)
         changePercent(changeInPercent.toString())
+        onClick{ _ ->
+            val action = PortfolioFragmentDirections.actionPortfolioFragmentToInfoFragment(stock.name, stock.symbol)
+            findNavController().navigate(action)
+        }
     }
 
     private fun PortfolioFragmentBinding.bindPortfolioData(portfolio: Portfolio) {
@@ -91,7 +95,6 @@ class PortfolioFragment: Fragment(R.layout.portfolio_fragment),
             portfolioChangeBalanceTv.text = "-$${ portfolio.change.toString().substring(1)} / ${portfolio.changeInPercentage}%"
             portfolioChangeBalanceTv.setTextColor(ContextCompat.getColor(requireContext(), R.color.red_orange))
         }
-        stocksNr.text = "${portfolio.stocksToShareAmount.keys.size}"
         if (portfolio.lastUpdatedTime + TEN_MINUTES < System.currentTimeMillis() && portfolio.stocksToShareAmount.isNotEmpty())
             viewModel.requestPortfolioUpdate(portfolio)
     }
@@ -110,10 +113,5 @@ class PortfolioFragment: Fragment(R.layout.portfolio_fragment),
                 viewModel.clearError()
             }
         }
-    }
-
-    override fun onItemClick(stock: Stock, position: Int) {
-        val action = PortfolioFragmentDirections.actionPortfolioFragmentToInfoFragment(stock.name, stock.symbol)
-        findNavController().navigate(action)
     }
 }
