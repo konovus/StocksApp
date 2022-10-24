@@ -40,7 +40,6 @@ class SearchFragment : Fragment(R.layout.search_fragment), SearchAdapter.OnItemC
 
     private fun bindLayoutData() {
         viewModel.state.observe(viewLifecycleOwner) { state ->
-            Log.i(TAG, "SearchFragment: bindLayoutData: $state")
             binding.progressBar.isVisible = state.isLoading
             binding.swipeRefreshLayout.isRefreshing = state.isRefreshing
 

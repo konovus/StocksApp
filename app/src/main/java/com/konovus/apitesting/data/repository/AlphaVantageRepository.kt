@@ -6,7 +6,7 @@ import com.konovus.apitesting.data.api.AlphaVantageApi
 import com.konovus.apitesting.data.csv.CSVParser
 import com.konovus.apitesting.data.local.db.CompaniesDatabase
 import com.konovus.apitesting.data.local.entities.CompanyInfo
-import com.konovus.apitesting.data.local.entities.IntraDayInfo
+import com.konovus.apitesting.data.local.entities.ChartData
 import com.konovus.apitesting.util.Constants.TAG
 import com.konovus.apitesting.util.Resource
 import kotlinx.coroutines.flow.Flow
@@ -22,7 +22,7 @@ class AlphaVantageRepository @Inject constructor(
     private val api: AlphaVantageApi,
     companiesDatabase: CompaniesDatabase,
     private val csvParser: CSVParser<CompanyInfo>,
-    private val csvParserIntraday: CSVParser<IntraDayInfo>
+    private val csvParserIntraday: CSVParser<ChartData>
 ) {
 
     private val companyDao = companiesDatabase.dao
@@ -74,10 +74,10 @@ class AlphaVantageRepository @Inject constructor(
         }
     }
 
-    suspend fun getIntradayInfo(
+    suspend fun getChartData(
         symbol: String,
         function: Pair<String, Int>
-    ): Resource<List<IntraDayInfo>> {
+    ): Resource<List<ChartData>> {
         return try {
             val response = api.getIntradayInfo(symbol = symbol, function = function.first )
             val results = csvParserIntraday.parse(response.byteStream())

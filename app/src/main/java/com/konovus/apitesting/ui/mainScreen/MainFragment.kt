@@ -7,6 +7,7 @@ import androidx.core.content.ContextCompat
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
+import androidx.lifecycle.asFlow
 import androidx.lifecycle.asLiveData
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.map
@@ -24,6 +25,8 @@ import com.konovus.apitesting.util.Constants.TEN_MINUTES
 import com.konovus.apitesting.util.Constants.TIME_SPANS
 import com.konovus.apitesting.util.toNDecimals
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
@@ -50,29 +53,38 @@ class MainFragment : Fragment(R.layout.main_fragment), FavoritesAdapter.OnItemCl
     }
 
     private fun MainFragmentBinding.bindFavoritesData() {
-        viewModel.state.map { it.favoritesList }.observe(viewLifecycleOwner){ stocks ->
-            addStocksTv.isVisible = stocks.isEmpty()
-            addStocksBtn.isVisible = stocks.isEmpty()
+        combine(viewModel.state.map { it.favoritesList }.asFlow(),
+            viewModel.store.stateFlow.map { it.chartData }) { favorites, chartData ->
+            Pair(favorites, chartData)
+        }.distinctUntilChanged().asLiveData().observe(viewLifecycleOwner) { pair ->
+            val stocks = pair.first
+            val chartData = pair.second
+            Log.i(TAG, "favorites list MF: ${stocks.map { it.symbol }} | $chartData")
             if (stocks.isEmpty()) return@observe
             if (stocks.minOf { it.lastUpdatedTime } + TEN_MINUTES < System.currentTimeMillis())
-                viewModel.updatePricesForFavorites(stocks)
-            Log.i(TAG, "favorites list MF: ${stocks.size}")
+                viewModel.updateFavoritesQuotes(stocks)
+            if (!chartData.keys.containsAll(stocks.map {
+                    it.symbol + TIME_SPANS[0].first + TIME_SPANS[0].second }))
+                viewModel.updateFavoritesChartData(stocks)
             val favoritesAdapter = FavoritesAdapter(this@MainFragment)
             recyclerViewFavorites.adapter = favoritesAdapter
             recyclerViewFavorites.isVisible = true
             favoritesAdapter.submitList(stocks.map {
                 FavoritesRVItem(
                     stock = it,
-                    intraDayInfo = viewModel.store.stateFlow.value
-                        .chartData[it.symbol + TIME_SPANS[0].first + TIME_SPANS[0].second] ?: emptyList()
+                    intraDayInfo = chartData[it.symbol + TIME_SPANS[0].first + TIME_SPANS[0].second]
+                        ?: emptyList()
                 )
             })
         }
+        viewModel.state.map { Pair(it.favoritesNr, it.favoritesLoading) }.observe(viewLifecycleOwner) {
+            Log.i(TAG, "bindFavoritesData: $it")
+            addStocksTv.isVisible = it.first == 0
+            addStocksBtn.isVisible = it.first == 0
 
-        viewModel.state.map { it.favoritesLoading }.observe(viewLifecycleOwner) {
-            favoritesShimmerLayout.root.isVisible = it
-            recyclerViewFavorites.isVisible = !it
-            if (it)
+            favoritesShimmerLayout.root.isVisible = it.first != 0 && it.second
+            recyclerViewFavorites.isVisible = !it.second
+            if (it.second)
                 favoritesShimmerLayout.root.startShimmer()
             else favoritesShimmerLayout.root.stopShimmer()
         }

@@ -7,7 +7,7 @@ import com.konovus.apitesting.data.local.dao.StockDao
 import com.konovus.apitesting.data.local.entities.Converters
 import com.konovus.apitesting.data.local.entities.Stock
 
-@Database(entities = [Stock::class], version = 11)
+@Database(entities = [Stock::class], version = 13)
 @TypeConverters(Converters::class)
 abstract class StockDatabase: RoomDatabase() {
     abstract val dao: StockDao

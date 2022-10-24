@@ -2,13 +2,10 @@ package com.konovus.apitesting.data.local.entities
 
 import java.time.LocalDate
 import java.time.LocalDateTime
-import java.time.chrono.ChronoLocalDate
-import java.time.chrono.ChronoLocalDateTime
 import java.time.format.DateTimeFormatter
-import java.time.temporal.Temporal
 import java.util.*
 
-data class IntraDayInfo(
+data class ChartData(
     val timestamp: String,
     val close: Double,
     val lastUpdatedTime: Long = System.currentTimeMillis()
@@ -25,6 +22,5 @@ data class IntraDayInfo(
         val formatter = DateTimeFormatter.ofPattern(pattern, Locale.getDefault())
         return LocalDate.parse(timestamp, formatter)
     }
-
 
 }

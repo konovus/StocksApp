@@ -1,5 +1,7 @@
 package com.konovus.apitesting.data.remote.responses
 
+import com.konovus.apitesting.data.local.entities.Stock
+
 data class MultipleQuotesResponse(
     val quoteResponse: QuoteResponse
 ) {
@@ -89,6 +91,15 @@ data class MultipleQuotesResponse(
             val twoHundredDayAverage: Double,
             val twoHundredDayAverageChange: Double,
             val twoHundredDayAverageChangePercent: Double
-        )
+        ) {
+            fun toStock() = Stock(
+                name = longName,
+                symbol = symbol,
+                price =  regularMarketPrice,
+                change = regularMarketChange,
+                changePercent = regularMarketChangePercent,
+                lastUpdatedTime = System.currentTimeMillis()
+            )
+        }
     }
 }

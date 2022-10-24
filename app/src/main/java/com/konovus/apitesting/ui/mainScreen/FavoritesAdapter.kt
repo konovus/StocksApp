@@ -2,14 +2,12 @@ package com.konovus.apitesting.ui.mainScreen
 
 
 import android.content.Context
-import android.util.Log
 import android.view.LayoutInflater
 import android.view.ViewGroup
 import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
-import com.bumptech.glide.Glide
 import com.github.mikephil.charting.charts.LineChart
 import com.github.mikephil.charting.components.Legend
 import com.github.mikephil.charting.components.XAxis
@@ -19,10 +17,9 @@ import com.github.mikephil.charting.data.LineData
 import com.github.mikephil.charting.data.LineDataSet
 import com.konovus.apitesting.R
 import com.konovus.apitesting.data.local.entities.FavoritesRVItem
-import com.konovus.apitesting.data.local.entities.IntraDayInfo
+import com.konovus.apitesting.data.local.entities.ChartData
 import com.konovus.apitesting.data.local.entities.Stock
 import com.konovus.apitesting.databinding.FavoritesStockItemBinding
-import com.konovus.apitesting.util.Constants.TAG
 import com.konovus.apitesting.util.toNDecimals
 
 class FavoritesAdapter(private val listener: OnItemClickListener) :
@@ -69,7 +66,7 @@ class FavoritesAdapter(private val listener: OnItemClickListener) :
         }
     }
 
-    private fun setupChart(stockInfos: List<IntraDayInfo>, chart: LineChart, context: Context) {
+    private fun setupChart(stockInfos: List<ChartData>, chart: LineChart, context: Context) {
         chart.onTouchListener = null
 
         val entries = mutableListOf<Entry>()

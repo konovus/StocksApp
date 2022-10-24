@@ -1,6 +1,6 @@
 package com.konovus.apitesting.data.local.entities
 
-data class FavoritesRVItem(
+data class UiModelFavoriteItem(
     val stock: Stock,
-    val intraDayInfo: List<ChartData>
+    val intraDayInfos: List<ChartData>
 )

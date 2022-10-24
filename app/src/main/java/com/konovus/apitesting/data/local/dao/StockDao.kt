@@ -6,7 +6,6 @@ import androidx.room.Insert
 import androidx.room.OnConflictStrategy.REPLACE
 import androidx.room.Query
 import androidx.room.Update
-import com.konovus.apitesting.data.local.entities.CompanyInfo
 import com.konovus.apitesting.data.local.entities.Stock
 import kotlinx.coroutines.flow.Flow
 
@@ -37,6 +36,9 @@ interface StockDao {
 
     @Update(onConflict = REPLACE)
     suspend fun updateStock(stock: Stock)
+
+    @Update(onConflict = REPLACE)
+    suspend fun updateStocks(stocks: List<Stock>)
 
     @Insert(onConflict = REPLACE)
     suspend fun insertStock(stock: Stock)

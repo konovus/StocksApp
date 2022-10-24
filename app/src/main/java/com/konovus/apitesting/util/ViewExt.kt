@@ -76,6 +76,12 @@ fun <T, S> LiveData<T?>.combineWith(other: LiveData<S?>): LiveData<Pair<T?, S?>>
         addSource(other) { value = Pair(this@combineWith.value, it) }
     }
 
+fun <T> List<T>.replace(newValue: T, block: (T) -> Boolean): List<T> {
+    return map {
+        if (block(it)) newValue else it
+    }
+}
+
 
 fun String?.withSuffix(): String {
     if (this == null) return ""

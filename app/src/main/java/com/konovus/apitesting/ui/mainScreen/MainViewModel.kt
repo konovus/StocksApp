@@ -1,18 +1,22 @@
 package com.konovus.apitesting.ui.mainScreen
 
 import android.app.Application
+import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.asLiveData
 import androidx.lifecycle.viewModelScope
 import com.konovus.apitesting.R
 import com.konovus.apitesting.data.api.YhFinanceApi
-import com.konovus.apitesting.data.local.entities.IntraDayInfo
+import com.konovus.apitesting.data.local.entities.ChartData
 import com.konovus.apitesting.data.local.entities.Portfolio
 import com.konovus.apitesting.data.local.entities.Stock
 import com.konovus.apitesting.data.redux.AppState
 import com.konovus.apitesting.data.redux.Store
 import com.konovus.apitesting.data.repository.MainRepository
+import com.konovus.apitesting.util.Constants.TAG
+import com.konovus.apitesting.util.Constants.TEN_MINUTES
+import com.konovus.apitesting.util.Constants.TIME_SPANS
 import com.konovus.apitesting.util.NetworkStatus
 import com.konovus.apitesting.util.Resource
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -38,9 +42,18 @@ class MainViewModel @Inject constructor(
     }
 
     private fun initSetup() {
-        getOrCreateDefaultPortfolio()
-//        getFavoritesStocks()
-        getTrendingStocks()
+//        getOrCreateDefaultPortfolio()
+        getFavoritesNr()
+        getFavoritesStocks()
+//        getTrendingStocks()
+    }
+
+    private fun getFavoritesNr() {
+        viewModelScope.launch {
+            stateFlow.value = stateFlow.value.copy(
+                favoritesNr = repository.getFavoritesNr()
+            )
+        }
     }
 
     private fun observeConnectivity() {
@@ -54,9 +67,66 @@ class MainViewModel @Inject constructor(
         }
     }
 
+    fun updateFavoritesQuotes(localFavs: List<Stock>) {
+        viewModelScope.launch {
+            stateFlow.value = stateFlow.value.copy(favoritesLoading = true)
+            if (localFavs.minOf { it.lastUpdatedTime } + TEN_MINUTES < System.currentTimeMillis()) {
+                val responseMultipleQuotes = repository.makeNetworkCall(
+                    "quotes ${localFavs.joinToString(",") { it.symbol }}") {
+                    yhFinanceApi.getMultipleQuotes(localFavs.joinToString(",") { it.symbol })
+                }
+                if (responseMultipleQuotes is Resource.Success) {
+                    val updatedStocks = responseMultipleQuotes.data!!.quoteResponse.result.map { it.toStock().copy(isFavorite = true) }
+                    //store.update { it.copy( favorites = updatedStocks.map { it.symbol } ) }
+                    repository.insertStocks(stocks = updatedStocks)
+                } else {
+                    stateFlow.value = stateFlow.value.copy(error = responseMultipleQuotes.message)
+                }
+            }
+            stateFlow.value = stateFlow.value.copy(favoritesLoading = false)
+        }
+    }
+
+    fun updateFavoritesChartData(localFavs: List<Stock>) {
+        viewModelScope.launch {
+            if (!store.stateFlow.value.chartData.map { it.key }.containsAll(localFavs.map {
+                    it.symbol + TIME_SPANS[0].first + TIME_SPANS[0].second })
+                && !stateFlow.value.isUpdatingChartsData) {
+                stateFlow.value = stateFlow.value.copy(favoritesLoading = true, isUpdatingChartsData = true)
+                val responseChartData = repository.makeNetworkCall(
+                    "chartData ${localFavs.joinToString(",") { it.symbol }}"
+                ) {
+                    yhFinanceApi.getMultipleChartsData(localFavs.joinToString(",") { it.symbol })
+                }
+                if (responseChartData is Resource.Success) {
+                    store.update { appState ->
+                        val map = appState.chartData.toMutableMap()
+                        responseChartData.data!!.values.forEach {
+                            map[it.symbol + TIME_SPANS[0].first + TIME_SPANS[0].second] =
+                                it.close.mapIndexed { index, close ->  ChartData(
+                                    close = close,
+                                    timestamp = it.timestamp[index].toString()
+                                ) }
+                        }
+                        appState.copy(chartData = map)
+                    }
+                } else {
+                    stateFlow.value = stateFlow.value.copy(error = responseChartData.message)
+                }
+                stateFlow.value =
+                    stateFlow.value.copy(favoritesLoading = false, isUpdatingChartsData = false)
+            }
+        }
+    }
+
     private fun getFavoritesStocks() {
-        repository.getFavoritesFlow().onEach {
-            stateFlow.value = stateFlow.value.copy(favoritesList = it.reversed())
+        repository.getFavoritesFlow().onEach { favorites ->
+            Log.i(TAG, "Main VM getFavoritesStocks: ${favorites.map { it.symbol }}")
+            stateFlow.value = stateFlow.value.copy(
+                favoritesList = favorites.sortedByDescending { it.id },
+                favoritesNr = favorites.size
+                )
+            store.update { it.copy(favorites = favorites.map { it.symbol }) }
         }.launchIn(viewModelScope)
     }
 
@@ -125,7 +195,7 @@ class MainViewModel @Inject constructor(
     private fun getOrCreateDefaultPortfolio() {
         viewModelScope.launch {
             if (store.stateFlow.value.portfolio == null)
-            repository.getPortfolioById(1)?.let { portfolio ->
+                repository.getPortfolioById(1)?.let { portfolio ->
                 store.update { it.copy(portfolio = portfolio) }
             } ?: run {
                 val portfolio = Portfolio(name = "Default", id = 1)
@@ -140,13 +210,15 @@ class MainViewModel @Inject constructor(
     }
 
     data class MainScreenStates(
-        val stockInfoData: MutableMap<String, List<IntraDayInfo>> = mutableMapOf(),
+        val stockInfoData: MutableMap<String, List<ChartData>> = mutableMapOf(),
         val trendingCompanies: List<Stock> = emptyList(),
         val favoritesList: List<Stock> = emptyList(),
+        val favoritesNr: Int? = null,
+        val isUpdatingChartsData: Boolean = false,
         val isLoading: Boolean = false,
-        val error: String? = null,
         val trendingLoading: Boolean = false,
-        val favoritesLoading: Boolean = false
+        val favoritesLoading: Boolean = true,
+        val error: String? = null,
     )
 }
 

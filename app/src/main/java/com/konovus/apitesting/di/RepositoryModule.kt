@@ -4,7 +4,7 @@ import com.konovus.apitesting.data.csv.CSVParser
 import com.konovus.apitesting.data.csv.CompanyListingsParser
 import com.konovus.apitesting.data.csv.IntradayParser
 import com.konovus.apitesting.data.local.entities.CompanyInfo
-import com.konovus.apitesting.data.local.entities.IntraDayInfo
+import com.konovus.apitesting.data.local.entities.ChartData
 import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn
@@ -25,7 +25,7 @@ abstract class RepositoryModule {
     @Singleton
     abstract fun bindIntradayParser(
         intradayParser: IntradayParser
-    ): CSVParser<IntraDayInfo>
+    ): CSVParser<ChartData>
 
 
 }

@@ -20,7 +20,7 @@ import com.google.android.material.bottomnavigation.BottomNavigationView
 import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.google.android.material.snackbar.Snackbar
 import com.konovus.apitesting.R
-import com.konovus.apitesting.data.local.entities.IntraDayInfo
+import com.konovus.apitesting.data.local.entities.ChartData
 import com.konovus.apitesting.data.local.entities.OrderType
 import com.konovus.apitesting.data.local.entities.Stock
 import com.konovus.apitesting.data.local.entities.Transaction
@@ -195,7 +195,7 @@ class InfoFragment : Fragment(R.layout.info_fragment) {
         }
     }
 
-    private fun setupChart(chartData: List<IntraDayInfo>?) {
+    private fun setupChart(chartData: List<ChartData>?) {
         binding.apply {
             if (chartData == null) return
             val entries = mutableListOf<Entry>()
@@ -237,7 +237,7 @@ class InfoFragment : Fragment(R.layout.info_fragment) {
 
     private fun InfoFragmentBinding.setupListeners() {
         backArrow.setOnClickListener { requireActivity().onBackPressed() }
-        follow.setOnClickListener { viewModel.onEvent(InfoScreenEvent.OnFavorite)}
+        follow.setOnClickListener { viewModel.onEvent(InfoScreenEvent.OnFavorite(stock))}
         tradeBtn.setOnClickListener { showBottomSheet() }
         timespansWrap.children.toList().forEachIndexed { index, view ->
             view.setOnClickListener {

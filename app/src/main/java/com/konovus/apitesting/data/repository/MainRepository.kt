@@ -146,6 +146,8 @@ class MainRepository @Inject constructor(
 
     fun getFavoritesFlow() = stockDao.getAllFavoriteStocksFlow()
 
+    suspend fun getFavoritesNr() = stockDao.getTotalFavStocks()
+
     suspend fun getLocalStockBySymbol(symbol: String) = stockDao.getStockBySymbol(symbol)
 
     suspend fun insertStock(stock: Stock) = stockDao.insertStock(stock)
@@ -153,6 +155,8 @@ class MainRepository @Inject constructor(
     suspend fun insertStocks(stocks: List<Stock>) = stockDao.insertStocks(stocks)
 
     suspend fun updateStock(stock: Stock) = stockDao.updateStock(stock)
+
+    suspend fun updateStocks(stocks: List<Stock>) = stockDao.updateStocks(stocks)
 
     suspend fun insertPortfolio(portfolio: Portfolio) = portfolioDao.insertPortfolio(portfolio)
 
