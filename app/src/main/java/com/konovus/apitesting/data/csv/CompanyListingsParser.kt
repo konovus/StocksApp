@@ -1,7 +1,6 @@
 package com.konovus.apitesting.data.csv
 
 import com.konovus.apitesting.data.local.entities.CompanyInfo
-import com.konovus.apitesting.data.local.entities.CompanyListing
 import com.opencsv.CSVReader
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext

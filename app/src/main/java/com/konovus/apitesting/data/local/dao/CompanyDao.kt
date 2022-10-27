@@ -7,9 +7,6 @@ import androidx.room.OnConflictStrategy.REPLACE
 import androidx.room.Query
 import androidx.room.Update
 import com.konovus.apitesting.data.local.entities.CompanyInfo
-import com.konovus.apitesting.data.local.entities.CompanyListing
-import com.konovus.apitesting.data.local.entities.Stock
-import com.konovus.apitesting.util.Resource
 import kotlinx.coroutines.flow.Flow
 
 @Dao

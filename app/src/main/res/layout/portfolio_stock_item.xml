@@ -77,7 +77,7 @@
                 android:textSize="17sp"
                 android:textStyle="bold"
                 android:textColor="@color/gray"
-                android:text="@{amountOwned}"
+                android:text="@{amountOwned + `$`}"
                 app:layout_constraintTop_toTopOf="@id/name_tv"
                 app:layout_constraintBottom_toBottomOf="@id/name_tv"
                 app:layout_constraintEnd_toEndOf="parent" />
@@ -87,7 +87,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:textSize="15sp"
-                android:textColor="@{ changePercentValue > 0 ? @color/green : @color/red_orange}"
+                android:textColor="@{ changePercentValue != 0 ? (changePercentValue > 0 ? @color/green : @color/red_orange) : @color/gray  }"
                 android:text="@{changePercentValue != 0 ?(changePercentValue > 0 ? `+` + changePercent + `%` :`-` + changePercent + `%`): changePercent + `%` }"
                 app:layout_constraintTop_toTopOf="@id/symbol_tv"
                 app:layout_constraintBottom_toBottomOf="@id/symbol_tv"

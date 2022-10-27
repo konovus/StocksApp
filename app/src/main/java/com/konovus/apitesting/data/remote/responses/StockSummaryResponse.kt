@@ -47,10 +47,10 @@ data class StockSummaryResponse(
                 description = summaryProfile.longBusinessSummary
             ),
             chartOCHLStats = Stock.ChartOCHLStats(
-                open = price.regularMarketOpen.fmt,
-                prevClose = price.regularMarketPreviousClose.fmt,
-                high = price.regularMarketDayHigh.fmt,
-                low = price.regularMarketDayLow.fmt,
+                open = price.regularMarketOpen.raw.toNDecimals(2).toString(),
+                prevClose = price.regularMarketPreviousClose.raw.toNDecimals(2).toString(),
+                high = price.regularMarketDayHigh.raw.toNDecimals(2).toString(),
+                low = price.regularMarketDayLow.raw.toNDecimals(2).toString(),
                 volume = price.regularMarketVolume.fmt
             ),
             lastUpdatedTime = System.currentTimeMillis()

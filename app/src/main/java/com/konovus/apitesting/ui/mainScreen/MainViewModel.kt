@@ -42,16 +42,17 @@ class MainViewModel @Inject constructor(
     }
 
     private fun initSetup() {
-//        getOrCreateDefaultPortfolio()
+        getOrCreateDefaultPortfolio()
+        getTrendingStocks()
         getFavoritesNr()
-        getFavoritesStocks()
-//        getTrendingStocks()
+        getFavoritesStocksFromDb()
     }
 
     private fun getFavoritesNr() {
         viewModelScope.launch {
             stateFlow.value = stateFlow.value.copy(
-                favoritesNr = repository.getFavoritesNr()
+                favoritesNr = repository.getFavoritesNr(),
+                favoritesLoading = true
             )
         }
     }
@@ -69,21 +70,24 @@ class MainViewModel @Inject constructor(
 
     fun updateFavoritesQuotes(localFavs: List<Stock>) {
         viewModelScope.launch {
-            stateFlow.value = stateFlow.value.copy(favoritesLoading = true)
-            if (localFavs.minOf { it.lastUpdatedTime } + TEN_MINUTES < System.currentTimeMillis()) {
+            if (localFavs.minOf { it.lastUpdatedTime } + TEN_MINUTES < System.currentTimeMillis()
+                && !stateFlow.value.isUpdatingQuotes) {
+                stateFlow.value = stateFlow.value.copy(favoritesLoading = true, isUpdatingQuotes = true)
                 val responseMultipleQuotes = repository.makeNetworkCall(
                     "quotes ${localFavs.joinToString(",") { it.symbol }}") {
                     yhFinanceApi.getMultipleQuotes(localFavs.joinToString(",") { it.symbol })
                 }
                 if (responseMultipleQuotes is Resource.Success) {
-                    val updatedStocks = responseMultipleQuotes.data!!.quoteResponse.result.map { it.toStock().copy(isFavorite = true) }
-                    //store.update { it.copy( favorites = updatedStocks.map { it.symbol } ) }
-                    repository.insertStocks(stocks = updatedStocks)
+                    val updatedStocks = responseMultipleQuotes.data!!.quoteResponse.result.map { result ->
+                        result.toStock().copy(isFavorite = true, id = localFavs.find { it.symbol == result.symbol }!!.id)
+                    }
+                    Log.i(TAG, "updateFavoritesQuotes: ${updatedStocks.map { Pair(it.symbol, it.lastUpdatedTime) }}")
+                    repository.updateStocks(stocks = updatedStocks)
                 } else {
                     stateFlow.value = stateFlow.value.copy(error = responseMultipleQuotes.message)
                 }
             }
-            stateFlow.value = stateFlow.value.copy(favoritesLoading = false)
+            stateFlow.value = stateFlow.value.copy(favoritesLoading = false, isUpdatingQuotes = false)
         }
     }
 
@@ -119,9 +123,9 @@ class MainViewModel @Inject constructor(
         }
     }
 
-    private fun getFavoritesStocks() {
+    private fun getFavoritesStocksFromDb() {
         repository.getFavoritesFlow().onEach { favorites ->
-            Log.i(TAG, "Main VM getFavoritesStocks: ${favorites.map { it.symbol }}")
+            Log.i(TAG, "Main VM getFavoritesStocksFromDb: ${favorites.map { it.symbol }}")
             stateFlow.value = stateFlow.value.copy(
                 favoritesList = favorites.sortedByDescending { it.id },
                 favoritesNr = favorites.size
@@ -142,27 +146,11 @@ class MainViewModel @Inject constructor(
                         trendingStocks = data.finance.result.first().quotes.map { it.toStock() }
                     )
                 }
-                stateFlow.value = stateFlow.value.copy(trendingLoading = false)
             }
+            stateFlow.value = stateFlow.value.copy(trendingLoading = false)
         }
     }
 
-    fun updatePricesForFavorites(localList: List<Stock>) {
-        viewModelScope.launch {
-            stateFlow.value = stateFlow.value.copy(favoritesLoading = true)
-            val result = repository.makeNetworkCall("favorites") {
-                yhFinanceApi.getMultipleQuotes(localList.joinToString(",") { it.symbol })
-            }
-            if (result.data == null) return@launch
-            val responseList = result.data.quoteResponse.result.map { Pair(it.symbol, it.regularMarketPrice) }
-            val updatedList = localList.map { stock ->
-                stock.copy(price = responseList.find { it.first == stock.symbol }?.second ?: stock.price,
-                    lastUpdatedTime = System.currentTimeMillis())
-            }
-            repository.insertStocks(updatedList)
-            stateFlow.value = stateFlow.value.copy(favoritesLoading = false)
-        }
-    }
 
     fun onEvent(event: MainScreenEvents) {
         when (event) {
@@ -215,9 +203,10 @@ class MainViewModel @Inject constructor(
         val favoritesList: List<Stock> = emptyList(),
         val favoritesNr: Int? = null,
         val isUpdatingChartsData: Boolean = false,
+        val isUpdatingQuotes: Boolean = false,
         val isLoading: Boolean = false,
         val trendingLoading: Boolean = false,
-        val favoritesLoading: Boolean = true,
+        val favoritesLoading: Boolean = false,
         val error: String? = null,
     )
 }

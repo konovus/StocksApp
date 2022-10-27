@@ -19,6 +19,7 @@ import com.konovus.apitesting.util.Constants.TEN_MINUTES
 import com.konovus.apitesting.util.Constants.TIME_SPANS
 import com.konovus.apitesting.util.NetworkStatus
 import com.konovus.apitesting.util.Resource
+import com.konovus.apitesting.util.replace
 import com.konovus.apitesting.util.toNDecimals
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.async
@@ -61,8 +62,10 @@ class InfoScreenViewModel @Inject constructor(
         viewModelScope.launch {
             stateFlow.value = stateFlow.value.copy(isLoading = true, chartLoading = true)
             store.read {
-                if (it.stockList.map { it.symbol }.contains(symbol)
-                    && it.stockList.find { it.symbol == symbol }!!.lastUpdatedTime + TEN_MINUTES > System.currentTimeMillis())
+                val storeContainsStock = it.stockList.map { it.symbol }.contains(symbol)
+                val stockIsUpdated = (it.stockList.find { it.symbol == symbol }?.lastUpdatedTime ?: 0) + TEN_MINUTES > System.currentTimeMillis()
+                Log.i(TAG, "initSetup: $storeContainsStock && $stockIsUpdated")
+                if (storeContainsStock && stockIsUpdated)
                     stateFlow.value = stateFlow.value.copy(
                         stock = it.stockList.find { it.symbol == symbol }!!.copy(
                             isFavorite = it.favorites.contains(symbol)),
@@ -70,9 +73,9 @@ class InfoScreenViewModel @Inject constructor(
                 else getStockSummary(symbol)
 
                 if (it.chartData.containsKey(symbol + TIME_SPANS[0].first + TIME_SPANS[0].second))
-                    stateFlow.value =
-                        stateFlow.value.copy(chartData = it.chartData[symbol + TIME_SPANS[0].first + TIME_SPANS[0].second],
-                            chartLoading = false)
+                    stateFlow.value = stateFlow.value.copy(
+                        chartData = it.chartData[symbol + TIME_SPANS[0].first + TIME_SPANS[0].second],
+                        chartLoading = false)
                 else getCurrentChartData(symbol)
             }
         }
@@ -108,7 +111,10 @@ class InfoScreenViewModel @Inject constructor(
                     val updatedStock = stockResponse.toStock().copy(
                         isFavorite = it.favorites.contains(symbol)
                     )
-                    list.add(updatedStock)
+                    Log.i(TAG, "getStockSummary: $updatedStock")
+                    if (list.map { it.symbol }.contains(updatedStock.symbol))
+                        list.replace(updatedStock) { it.symbol == updatedStock.symbol }
+                    else list.add(updatedStock)
                     stateFlow.value = stateFlow.value.copy(
                         stock = updatedStock,
                         isLoading = false,

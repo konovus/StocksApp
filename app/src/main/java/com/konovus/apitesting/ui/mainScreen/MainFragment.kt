@@ -59,13 +59,14 @@ class MainFragment : Fragment(R.layout.main_fragment), FavoritesAdapter.OnItemCl
         }.distinctUntilChanged().asLiveData().observe(viewLifecycleOwner) { pair ->
             val stocks = pair.first
             val chartData = pair.second
-            Log.i(TAG, "favorites list MF: ${stocks.map { it.symbol }} | $chartData")
+            Log.i(TAG, "favorites list MF: ${stocks.map { Triple(it.id, it.symbol, it.lastUpdatedTime) }} |$stocks | $chartData")
             if (stocks.isEmpty()) return@observe
             if (stocks.minOf { it.lastUpdatedTime } + TEN_MINUTES < System.currentTimeMillis())
                 viewModel.updateFavoritesQuotes(stocks)
             if (!chartData.keys.containsAll(stocks.map {
                     it.symbol + TIME_SPANS[0].first + TIME_SPANS[0].second }))
                 viewModel.updateFavoritesChartData(stocks)
+
             val favoritesAdapter = FavoritesAdapter(this@MainFragment)
             recyclerViewFavorites.adapter = favoritesAdapter
             recyclerViewFavorites.isVisible = true
@@ -78,7 +79,6 @@ class MainFragment : Fragment(R.layout.main_fragment), FavoritesAdapter.OnItemCl
             })
         }
         viewModel.state.map { Pair(it.favoritesNr, it.favoritesLoading) }.observe(viewLifecycleOwner) {
-            Log.i(TAG, "bindFavoritesData: $it")
             addStocksTv.isVisible = it.first == 0
             addStocksBtn.isVisible = it.first == 0
 
@@ -91,10 +91,10 @@ class MainFragment : Fragment(R.layout.main_fragment), FavoritesAdapter.OnItemCl
     }
 
     private fun MainFragmentBinding.bindTrendingData() {
-        viewModel.store.stateFlow.map { it.trendingStocks }.asLiveData().observe(viewLifecycleOwner) {
-                if (it.isNotEmpty()) {
+        viewModel.store.stateFlow.map { it.trendingStocks }.asLiveData().observe(viewLifecycleOwner) { list ->
+                if (list.isNotEmpty()) {
                     recyclerViewTrending.withModels {
-                        it.forEach {
+                        list.forEach {
                             trendingItem { setupEachTrendingItem(it) }
                         }
                     }

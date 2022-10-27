@@ -16,8 +16,8 @@ import com.github.mikephil.charting.data.Entry
 import com.github.mikephil.charting.data.LineData
 import com.github.mikephil.charting.data.LineDataSet
 import com.konovus.apitesting.R
-import com.konovus.apitesting.data.local.entities.FavoritesRVItem
 import com.konovus.apitesting.data.local.entities.ChartData
+import com.konovus.apitesting.data.local.entities.FavoritesRVItem
 import com.konovus.apitesting.data.local.entities.Stock
 import com.konovus.apitesting.databinding.FavoritesStockItemBinding
 import com.konovus.apitesting.util.toNDecimals
@@ -66,11 +66,11 @@ class FavoritesAdapter(private val listener: OnItemClickListener) :
         }
     }
 
-    private fun setupChart(stockInfos: List<ChartData>, chart: LineChart, context: Context) {
+    private fun setupChart(chartData: List<ChartData>, chart: LineChart, context: Context) {
         chart.onTouchListener = null
 
         val entries = mutableListOf<Entry>()
-        stockInfos.forEachIndexed { i, it ->
+        chartData.forEachIndexed { i, it ->
             entries.add(Entry(i.toFloat(), it.close.toFloat()))
         }
         chart.setBackgroundColor(android.R.attr.fillColor)

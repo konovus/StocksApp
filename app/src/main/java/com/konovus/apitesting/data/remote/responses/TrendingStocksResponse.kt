@@ -44,7 +44,7 @@ data class TrendingStocksResponse(
                 val triggerable: Boolean
             ) {
                 fun toStock() = Stock(
-                    name = longName,
+                    name = longName ?: shortName,
                     symbol = symbol,
                     price = regularMarketPrice,
                     change = regularMarketChange,
