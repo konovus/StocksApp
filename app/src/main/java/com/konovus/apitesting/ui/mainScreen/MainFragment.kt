@@ -135,7 +135,7 @@ class MainFragment : Fragment(R.layout.main_fragment), FavoritesAdapter.OnItemCl
                     portfolioChangeBalanceTv.text = "-$${ it.change.toString().substring(1)} / ${it.changeInPercentage}%"
                     portfolioChangeBalanceTv.setTextColor(ContextCompat.getColor(requireContext(), R.color.red_orange))
                 }
-                if (it.lastUpdatedTime + TEN_MINUTES * 1000 < System.currentTimeMillis() && it.stocksToShareAmount.isNotEmpty())
+                if (it.lastUpdatedTime + TEN_MINUTES < System.currentTimeMillis() && it.stocksToShareAmount.isNotEmpty())
                     viewModel.onEvent(MainScreenEvents.OnRequestPortfolioUpdate(it))
             }
         }

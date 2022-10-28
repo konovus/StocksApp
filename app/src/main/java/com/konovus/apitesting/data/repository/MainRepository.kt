@@ -52,7 +52,7 @@ class MainRepository @Inject constructor(
             Log.i(TAG, "makeNetworkCall Error: $tag , ${e.message} , ${e.localizedMessage}")
             Resource.Error("Couldn't reach the server. Check your internet connection.", null)
         } catch (e: Exception) {
-            Log.i(TAG, "makeNetworkCall: Unknown Error: ${e.cause}.")
+            Log.i(TAG, "makeNetworkCall: Unknown Error: ${e.message} , ${e.cause}.")
             Resource.Error("Couldn't reach the server. Check your internet connection.", null)
         }
     }

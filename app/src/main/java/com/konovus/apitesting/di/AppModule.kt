@@ -12,7 +12,7 @@ import com.konovus.apitesting.data.local.db.PortfolioDatabase
 import com.konovus.apitesting.data.local.db.StockDatabase
 import com.konovus.apitesting.data.redux.AppState
 import com.konovus.apitesting.data.redux.Store
-import com.konovus.apitesting.util.Constants.BASE_URL2
+import com.konovus.apitesting.util.Constants.BASE_URL_ALPHA_VANTAGE
 import com.konovus.apitesting.util.Constants.BASE_URL_YH_FINANCE
 import com.konovus.apitesting.util.NetworkConnectionObserver
 import com.squareup.moshi.Moshi
@@ -45,7 +45,7 @@ object AppModule {
     fun provideStocksListingsApi(): AlphaVantageApi {
         return Retrofit.Builder()
             .addConverterFactory(GsonConverterFactory.create())
-            .baseUrl(BASE_URL2)
+            .baseUrl(BASE_URL_ALPHA_VANTAGE)
             .build()
             .create(AlphaVantageApi::class.java)
     }

@@ -19,7 +19,6 @@ import com.konovus.apitesting.util.Constants.TEN_MINUTES
 import com.konovus.apitesting.util.Constants.TIME_SPANS
 import com.konovus.apitesting.util.NetworkStatus
 import com.konovus.apitesting.util.Resource
-import com.konovus.apitesting.util.replace
 import com.konovus.apitesting.util.toNDecimals
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.async
@@ -111,10 +110,9 @@ class InfoScreenViewModel @Inject constructor(
                     val updatedStock = stockResponse.toStock().copy(
                         isFavorite = it.favorites.contains(symbol)
                     )
-                    Log.i(TAG, "getStockSummary: $updatedStock")
-                    if (list.map { it.symbol }.contains(updatedStock.symbol))
-                        list.replace(updatedStock) { it.symbol == updatedStock.symbol }
-                    else list.add(updatedStock)
+                    Log.i(TAG, "getStockSummary: ${Pair(updatedStock.symbol, updatedStock.lastUpdatedTime)}")
+                    list.removeIf{it.symbol == updatedStock.symbol}
+                    list.add(updatedStock)
                     stateFlow.value = stateFlow.value.copy(
                         stock = updatedStock,
                         isLoading = false,

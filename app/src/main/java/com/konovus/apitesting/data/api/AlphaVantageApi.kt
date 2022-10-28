@@ -1,9 +1,10 @@
 package com.konovus.apitesting.data.api
 
-import com.konovus.apitesting.util.Constants.API_KEY_ALPHA_VANTAGE
+import com.konovus.apitesting.BuildConfig.API_KEY_ALPHA_VANTAGE
 import okhttp3.ResponseBody
 import retrofit2.http.GET
 import retrofit2.http.Query
+
 
 interface AlphaVantageApi {
 

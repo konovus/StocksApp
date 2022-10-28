@@ -17,9 +17,14 @@ android {
         targetSdk 31
         versionCode 1
         versionName "1.0"
-        buildConfigField("String", "API_KEY", API_KEY)
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+
+        Properties properties = new Properties()
+        properties.load(project.rootProject.file("local.properties").newDataInputStream())
+
+        buildConfigField "String", "API_KEY_ALPHA_VANTAGE", "\"${properties.getProperty("API_KEY_ALPHA_VANTAGE")}\""
+        buildConfigField "String", "API_KEY_YH_FINANCE", "\"${properties.getProperty("API_KEY_YH_FINANCE")}\""
     }
 
     buildTypes {
