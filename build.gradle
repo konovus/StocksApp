@@ -3,7 +3,7 @@
 buildscript {
     ext{
         // App dependencies
-        appCompatVersion = "1.2.0"
+        appCompatVersion = "1.4.2"
         constraintLayoutVersion = "2.0.4"
         coroutinesVersion = '1.5.2-native-mt'
         dataStoreVersion = "1.0.0-alpha02"

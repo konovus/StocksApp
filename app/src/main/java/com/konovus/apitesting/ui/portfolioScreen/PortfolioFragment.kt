@@ -87,12 +87,12 @@ class PortfolioFragment: Fragment(R.layout.portfolio_fragment) {
         totalBalanceTv.text = "$${portfolio.totalBalance.toNDecimals(2)}"
 
         if (portfolio.change == 0.0)
-            portfolioChangeBalanceTv.text = "$${portfolio.change} / ${portfolio.changeInPercentage}%"
+            portfolioChangeBalanceTv.text = "$${portfolio.change} / ${portfolio.changePercent}%"
         else if (portfolio.change > 0) {
-            portfolioChangeBalanceTv.text = "+$${portfolio.change} / ${portfolio.changeInPercentage}%"
+            portfolioChangeBalanceTv.text = "+$${portfolio.change} / ${portfolio.changePercent}%"
             portfolioChangeBalanceTv.setTextColor(ContextCompat.getColor(requireContext(), R.color.green))
         } else {
-            portfolioChangeBalanceTv.text = "-$${ portfolio.change.toString().substring(1)} / ${portfolio.changeInPercentage}%"
+            portfolioChangeBalanceTv.text = "-$${ portfolio.change.toString().substring(1)} / ${portfolio.changePercent}%"
             portfolioChangeBalanceTv.setTextColor(ContextCompat.getColor(requireContext(), R.color.red_orange))
         }
         if (portfolio.lastUpdatedTime + TEN_MINUTES < System.currentTimeMillis() && portfolio.stocksToShareAmount.isNotEmpty())

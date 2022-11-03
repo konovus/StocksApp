@@ -12,7 +12,7 @@ data class Portfolio(
     val name: String = "Default",
     val totalBalance: Double = 0.0,
     val change: Double = 0.0,
-    val changeInPercentage: Double = 0.0,
+    val changePercent: Double = 0.0,
     val transactions: List<Transaction> = emptyList(),
     val lastUpdatedTime: Long = 0L
 ): Parcelable {

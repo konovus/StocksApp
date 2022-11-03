@@ -99,27 +99,26 @@ class InfoScreenViewModel @Inject constructor(
         }
     }
 
-    private fun getStockSummary(symbol: String) {
-        viewModelScope.launch {
-            val stockSummaryResult = repository.makeNetworkCall(symbol) {
-                yhFinanceApi.getStockSummary(symbol)
-            }
-            processNetworkResult(stockSummaryResult) { stockResponse ->
-                store.update {
-                    val list = it.stockList.toMutableList()
-                    val updatedStock = stockResponse.toStock().copy(
-                        isFavorite = it.favorites.contains(symbol)
-                    )
-                    Log.i(TAG, "getStockSummary: ${Pair(updatedStock.symbol, updatedStock.lastUpdatedTime)}")
-                    list.removeIf{it.symbol == updatedStock.symbol}
-                    list.add(updatedStock)
-                    stateFlow.value = stateFlow.value.copy(
-                        stock = updatedStock,
-                        isLoading = false,
-                        tabLoading = false
-                    )
-                    it.copy(stockList = list)
-                }
+    private fun getStockSummary(symbol: String) = viewModelScope.launch {
+
+        val stockSummaryResult = repository.makeNetworkCall(symbol) {
+            yhFinanceApi.getStockSummary(symbol)
+        }
+        processNetworkResult(stockSummaryResult) { stockResponse ->
+            store.update {
+                val list = it.stockList.toMutableList()
+                val updatedStock = stockResponse.toStock().copy(
+                    isFavorite = it.favorites.contains(symbol)
+                )
+                Log.i(TAG, "getStockSummary: ${Pair(updatedStock.symbol, updatedStock.lastUpdatedTime)}")
+                list.removeIf{it.symbol == updatedStock.symbol}
+                list.add(updatedStock)
+                stateFlow.value = stateFlow.value.copy(
+                    stock = updatedStock,
+                    isLoading = false,
+                    tabLoading = false
+                )
+                it.copy(stockList = list)
             }
         }
     }

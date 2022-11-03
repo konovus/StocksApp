@@ -1,7 +1,9 @@
 package com.konovus.apitesting.ui.infoScreen
 
 import android.R.attr.fillColor
+import android.annotation.SuppressLint
 import android.os.Bundle
+import android.util.Log
 import android.view.View
 import android.widget.Toast
 import androidx.core.content.ContextCompat
@@ -10,7 +12,9 @@ import androidx.core.view.isVisible
 import androidx.core.widget.doOnTextChanged
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
-import androidx.lifecycle.*
+import androidx.lifecycle.asFlow
+import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.map
 import androidx.navigation.fragment.navArgs
 import com.github.mikephil.charting.components.YAxis
 import com.github.mikephil.charting.data.Entry
@@ -22,17 +26,18 @@ import com.google.android.material.snackbar.Snackbar
 import com.konovus.apitesting.R
 import com.konovus.apitesting.data.local.entities.ChartData
 import com.konovus.apitesting.data.local.entities.OrderType
-import com.konovus.apitesting.data.local.entities.Stock
 import com.konovus.apitesting.data.local.entities.Transaction
 import com.konovus.apitesting.databinding.BottomSheetBinding
 import com.konovus.apitesting.databinding.InfoFragmentBinding
 import com.konovus.apitesting.transactionsItem
+import com.konovus.apitesting.util.Constants.TAG
 import com.konovus.apitesting.util.MpMarker
 import com.konovus.apitesting.util.NetworkStatus
 import com.konovus.apitesting.util.OnTabSelected
 import com.konovus.apitesting.util.toNDecimals
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.launch
 
 
 @AndroidEntryPoint
@@ -42,15 +47,13 @@ class InfoFragment : Fragment(R.layout.info_fragment) {
     private val binding get() = _binding!!
     private val viewModel: InfoScreenViewModel by viewModels()
     private val args: InfoFragmentArgs by navArgs()
-    private lateinit var stock: Stock
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         _binding = InfoFragmentBinding.bind(view)
 
-        binding.bindVisibilityAndLoadingAndLayoutStates()
-        binding.bindQuoteData()
-        viewModel.state.map { it.chartData }.distinctUntilChanged().observe(viewLifecycleOwner, ::setupChart)
+        binding.bindVisibilityAndLoadingStates()
+        viewModel.state.map { it.chartData }.observe(viewLifecycleOwner, ::setupChart)
         binding.setupListeners()
         binding.bindTransactionsData()
         bindErrorHandling()
@@ -58,12 +61,12 @@ class InfoFragment : Fragment(R.layout.info_fragment) {
         requireActivity().findViewById<BottomNavigationView>(R.id.bottom_navigation).isVisible = false
     }
 
-    private fun InfoFragmentBinding.bindTransactionsData() {
+    private fun InfoFragmentBinding.bindTransactionsData() = lifecycleScope.launch {
         combine(viewModel.store.stateFlow.map { it.portfolio?.transactions },
             viewModel.state.map { it.tabNr }.asFlow()) { transactions, tabNr ->
             Pair(transactions, tabNr)
-        }.distinctUntilChanged().onEach { pair ->
-            if (pair.first.isNullOrEmpty() || pair.second != 2) return@onEach
+        }.distinctUntilChanged().collectLatest { pair ->
+            if (pair.first.isNullOrEmpty() || pair.second != 2) return@collectLatest
 
             transactionsTab.epoxyRecyclerView.withModels {
                 pair.first!!.filter { it.symbol == args.symbol }.sortedByDescending { it.dateTime }
@@ -75,17 +78,19 @@ class InfoFragment : Fragment(R.layout.info_fragment) {
                     }
                 }
             }
-        }.launchIn(lifecycleScope)
+        }
     }
 
 
-    private fun InfoFragmentBinding.bindVisibilityAndLoadingAndLayoutStates() {
-        combine(viewModel.state.asFlow().distinctUntilChanged(),
+    private fun InfoFragmentBinding.bindVisibilityAndLoadingStates() = lifecycleScope.launch {
+        combine(viewModel.state.asFlow(),
                 viewModel.store.stateFlow.map { it.networkStatus })  { state, networkStatus  ->
             Pair(state, networkStatus)
-        }.onEach {
-            val state = it.first
-            val networkStatus = it.second
+        }.distinctUntilChanged().collectLatest { pair ->
+            Log.i(TAG, "bindVisibilityAndLoadingAndLayoutStates: $pair")
+            val state = pair.first
+            val networkStatus = pair.second
+            state.stock?.let{ binding.stock = it }
 
             progressBar.isVisible = state.isLoading && networkStatus != NetworkStatus.Unavailable
             topWrap.isVisible = !state.isLoading && networkStatus != NetworkStatus.Unavailable
@@ -93,8 +98,6 @@ class InfoFragment : Fragment(R.layout.info_fragment) {
             tradeBtn.isVisible = networkStatus != NetworkStatus.Unavailable
             chart.visibility = if (!state.chartLoading) View.VISIBLE else View.INVISIBLE
             progressChart.isVisible = state.chartLoading
-            symbolTv.text = args.symbol
-            nameTv.text = args.name
             progressTabs.isVisible = state.tabLoading
             statisticsTab.root.visibility =
                 if (!state.tabLoading && state.tabNr == 0) View.VISIBLE else View.INVISIBLE
@@ -103,36 +106,20 @@ class InfoFragment : Fragment(R.layout.info_fragment) {
             transactionsTab.root.visibility =
                 if (!state.tabLoading && state.tabNr == 2) View.VISIBLE else View.INVISIBLE
             noTransactions.isVisible = state.transactions.isEmpty() && state.tabNr == 2
-            state.stock?.let{
-                this@InfoFragment.stock = it
-                binding.stock = it
-            }
-            follow.isSelected = state.stock?.isFavorite == true
-
-        }.launchIn(lifecycleScope)
-    }
-
-    private fun InfoFragmentBinding.bindQuoteData() {
-        viewModel.state.map { it.stock }.distinctUntilChanged().observe(viewLifecycleOwner) { stock ->
-            if (stock?.chartChange == null) return@observe
-            if (stock.chartChange.change > 0) {
-                priceChangeTv.text = "+$${stock.chartChange.change} (${stock.chartChange.changePercent}%)"
-                priceChangeTv.setTextColor(ContextCompat.getColor(requireContext(), R.color.green))
-            } else {
-                priceChangeTv.text = "$${stock.chartChange.change} (${stock.chartChange.changePercent}%)"
-                priceChangeTv.setTextColor(ContextCompat.getColor(requireContext(), R.color.red_orange))
-            }
         }
     }
 
     private fun showBottomSheet() {
+        if (binding.stock == null || viewModel.store.stateFlow.value.portfolio == null) return
+
         val bottomSheet = BottomSheetDialog(requireContext())
         val bottomSheetBinding = BottomSheetBinding.inflate(layoutInflater)
         bottomSheet.setContentView(bottomSheetBinding.root)
         bottomSheet.show()
         bottomSheetBinding.apply {
-            symbolTv.text = stock.symbol
-            priceTv.text = "$${stock.price}"
+            symbolTv.text = binding.stock!!.symbol
+            @SuppressLint("SetTextI18n")
+            priceTv.text = "$${binding.stock!!.price}"
 
             var orderType = OrderType.Buy
             buySellSwitch.buyBtn.setOnClickListener {
@@ -164,8 +151,8 @@ class InfoFragment : Fragment(R.layout.info_fragment) {
         viewModel.onEvent(
             InfoScreenEvent.OnMarketOrderEvent(
                 Transaction(
-                    price = stock.price,
-                    symbol = stock.symbol,
+                    price = binding.stock!!.price,
+                    symbol = binding.stock!!.symbol,
                     amount = sumInput.text.toString().toDouble().toNDecimals(2),
                     dateTime = System.currentTimeMillis(),
                     orderType = orderType
@@ -180,11 +167,13 @@ class InfoFragment : Fragment(R.layout.info_fragment) {
 
         if (orderType == OrderType.Sell) {
             val portfolio = viewModel.store.stateFlow.value.portfolio!!
-            if (portfolio.stocksToShareAmount.isEmpty())
+            if (portfolio.stocksToShareAmount.isEmpty()) {
                 sumInputWrap.error = "No shares to sell"
+                return
+            }
             val amountToSell = text.toString().toDouble()
             val amountOwned = portfolio.stocksToShareAmount.getValue(args.symbol).times(
-                stock.price).toNDecimals(2)
+                binding.stock!!.price).toNDecimals(2)
             if (amountToSell > amountOwned)
                 sumInputWrap.error = "Max to sell is $amountOwned"
             else sumInputWrap.error = null
@@ -252,7 +241,7 @@ class InfoFragment : Fragment(R.layout.info_fragment) {
     }
 
     private fun bindErrorHandling() {
-        viewModel.state.map { it.error }.distinctUntilChanged().observe(viewLifecycleOwner) { error ->
+        viewModel.state.map { it.error }.observe(viewLifecycleOwner) { error ->
             if (error != null) {
                 Snackbar.make(binding.root, error, Snackbar.LENGTH_LONG).show()
                 viewModel.clearError()

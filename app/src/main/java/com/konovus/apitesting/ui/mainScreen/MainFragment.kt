@@ -3,7 +3,6 @@ package com.konovus.apitesting.ui.mainScreen
 import android.os.Bundle
 import android.util.Log
 import android.view.View
-import androidx.core.content.ContextCompat
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
@@ -23,7 +22,6 @@ import com.konovus.apitesting.ui.MainActivity
 import com.konovus.apitesting.util.Constants.TAG
 import com.konovus.apitesting.util.Constants.TEN_MINUTES
 import com.konovus.apitesting.util.Constants.TIME_SPANS
-import com.konovus.apitesting.util.toNDecimals
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -59,7 +57,7 @@ class MainFragment : Fragment(R.layout.main_fragment), FavoritesAdapter.OnItemCl
         }.distinctUntilChanged().asLiveData().observe(viewLifecycleOwner) { pair ->
             val stocks = pair.first
             val chartData = pair.second
-            Log.i(TAG, "favorites list MF: ${stocks.map { Triple(it.id, it.symbol, it.lastUpdatedTime) }} |$stocks | $chartData")
+            Log.i(TAG, "favorites list MF: ${stocks.map { Triple(it.id, it.symbol, it.lastUpdatedTime) }} | $chartData |$stocks ")
             if (stocks.isEmpty()) return@observe
             if (stocks.minOf { it.lastUpdatedTime } + TEN_MINUTES < System.currentTimeMillis())
                 viewModel.updateFavoritesQuotes(stocks)
@@ -121,20 +119,10 @@ class MainFragment : Fragment(R.layout.main_fragment), FavoritesAdapter.OnItemCl
 
     private fun MainFragmentBinding.bindPortfolioData() {
         lifecycleScope.launch {
-            viewModel.store.stateFlow.map { it.portfolio }.filterNotNull().asLiveData().observe(viewLifecycleOwner) {
+            viewModel.store.stateFlow.map { it.portfolio }.distinctUntilChanged()
+                .filterNotNull().asLiveData().observe(viewLifecycleOwner) {
                 Log.i(TAG, "getPortfolioData: $it , ${it.stocksToShareAmount}")
-
-                totalBalanceTv.text = "$${it.totalBalance.toNDecimals(2)}"
-
-                if (it.change == 0.0)
-                    portfolioChangeBalanceTv.text = "$${it.change} / ${it.changeInPercentage}%"
-                else if (it.change > 0) {
-                    portfolioChangeBalanceTv.text = "+$${it.change} / ${it.changeInPercentage}%"
-                    portfolioChangeBalanceTv.setTextColor(ContextCompat.getColor(requireContext(), R.color.green))
-                } else {
-                    portfolioChangeBalanceTv.text = "-$${ it.change.toString().substring(1)} / ${it.changeInPercentage}%"
-                    portfolioChangeBalanceTv.setTextColor(ContextCompat.getColor(requireContext(), R.color.red_orange))
-                }
+                portfolio = it
                 if (it.lastUpdatedTime + TEN_MINUTES < System.currentTimeMillis() && it.stocksToShareAmount.isNotEmpty())
                     viewModel.onEvent(MainScreenEvents.OnRequestPortfolioUpdate(it))
             }

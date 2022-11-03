@@ -4,7 +4,7 @@
 
     <item
         android:id="@+id/star_item"
-        android:icon="@drawable/ic_baseline_star_outline_24"
+        android:icon="@drawable/ic_star_outline"
         android:title="Star"
         app:showAsAction="always|collapseActionView"/>
 </menu>

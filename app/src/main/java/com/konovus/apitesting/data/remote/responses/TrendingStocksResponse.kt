@@ -48,7 +48,8 @@ data class TrendingStocksResponse(
                     symbol = symbol,
                     price = regularMarketPrice,
                     change = regularMarketChange,
-                    changePercent = regularMarketChangePercent.toNDecimals(2)
+                    changePercent = regularMarketChangePercent.toNDecimals(2),
+                    quoteType = quoteType
                 )
             }
         }

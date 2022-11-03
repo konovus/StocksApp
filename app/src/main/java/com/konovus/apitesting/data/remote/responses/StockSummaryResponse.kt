@@ -35,6 +35,7 @@ data class StockSummaryResponse(
             price = price.regularMarketPrice.raw.toNDecimals(2),
             change = price.regularMarketChange.raw.toNDecimals(2),
             changePercent = price.regularMarketChangePercent.raw.toNDecimals(2),
+            quoteType = quoteType.quoteType,
             chartChange = Stock.ChartChange(
                 change = price.regularMarketChange.raw.toNDecimals(2),
                 changePercent = price.regularMarketChangePercent.raw.toNDecimals(2)),

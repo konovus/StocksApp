@@ -57,11 +57,11 @@ class MainRepository @Inject constructor(
         }
     }
 
-    suspend fun updatePortfolioStocksPrices(portfolio: Portfolio) {
+    private suspend fun getUpdatedStockList(portfolio: Portfolio): List<Stock> {
         val result = makeNetworkCall("updatePortfolioStockPrices") {
             yhFinanceApi.getMultipleQuotes(portfolio.stocksToShareAmount.keys.joinToString(","))
         }
-        if (result.data == null) return
+        if (result.data == null) return emptyList()
         val responseList = result.data.quoteResponse.result.map { Pair(it.symbol, it.regularMarketPrice) }
         val localList = result.data.quoteResponse.result.filterNot {
             it.toString().contains("null")
@@ -72,6 +72,11 @@ class MainRepository @Inject constructor(
                 lastUpdatedTime = System.currentTimeMillis())
         }
         insertStocks(updatedList)
+        return updatedList
+    }
+
+    suspend fun updatePortfolioStocksPrices(portfolio: Portfolio) {
+        val updatedList = getUpdatedStockList(portfolio)
         var updatedBalance = 0.0
         updatedList.forEach {
             updatedBalance += it.price * portfolio.stocksToShareAmount[it.symbol]!!
@@ -83,7 +88,7 @@ class MainRepository @Inject constructor(
         val updatedPortfolio = portfolio.copy(
             totalBalance = updatedBalance.toNDecimals(2),
             change = change.toNDecimals(2),
-            changeInPercentage = (change / initialBalance * 100).toNDecimals(2),
+            changePercent = (change / initialBalance * 100).toNDecimals(2),
             lastUpdatedTime = System.currentTimeMillis()
         )
         store.update { it.copy(portfolio = updatedPortfolio) }

@@ -18,6 +18,7 @@ data class Stock(
     val change: Double = 0.0,
     val changePercent: Double = 0.0,
     val chartChange: ChartChange? = null,
+    val quoteType: String = "",
     val isFavorite: Boolean = false,
     val chartOCHLStats: ChartOCHLStats? = null,
     val descriptionStats: DescriptionStats? = null,
