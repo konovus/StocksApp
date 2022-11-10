@@ -80,21 +80,19 @@ class InfoScreenViewModel @Inject constructor(
         }
     }
 
-    private fun getCurrentChartData(symbol: String, pos: Int = 0) {
-        viewModelScope.launch {
-            val chartDataResult = async { alphaVantageRepository.getChartData(symbol, TIME_SPANS[pos]) }
-            processNetworkResult(chartDataResult.await()) { chartData ->
-                store.update {
-                    val map = it.chartData.toMutableMap()
-                    map[symbol + TIME_SPANS[pos].first + TIME_SPANS[pos].second] = chartData
+    private fun getCurrentChartData(symbol: String, pos: Int = 0) = viewModelScope.launch {
+        val chartDataResult = async { alphaVantageRepository.getChartData(symbol, TIME_SPANS[pos]) }
+        processNetworkResult(chartDataResult.await()) { chartData ->
+            store.update {
+                val map = it.chartData.toMutableMap()
+                map[symbol + TIME_SPANS[pos].first + TIME_SPANS[pos].second] = chartData
 
-                    stateFlow.value = stateFlow.value.copy(
-                        chartData = chartData.ifEmpty { null },
-                        chartLoading = false,
-                        stock = getUpdatedStock(map[symbol + TIME_SPANS[pos].first + TIME_SPANS[pos].second]!!)
-                    )
-                    it.copy(chartData = map)
-                }
+                stateFlow.value = stateFlow.value.copy(
+                    chartData = chartData.ifEmpty { null },
+                    chartLoading = false,
+                    stock = getUpdatedStock(map[symbol + TIME_SPANS[pos].first + TIME_SPANS[pos].second]!!)
+                )
+                it.copy(chartData = map)
             }
         }
     }
@@ -110,7 +108,6 @@ class InfoScreenViewModel @Inject constructor(
                 val updatedStock = stockResponse.toStock().copy(
                     isFavorite = it.favorites.contains(symbol)
                 )
-                Log.i(TAG, "getStockSummary: ${Pair(updatedStock.symbol, updatedStock.lastUpdatedTime)}")
                 list.removeIf{it.symbol == updatedStock.symbol}
                 list.add(updatedStock)
                 stateFlow.value = stateFlow.value.copy(
@@ -138,7 +135,7 @@ class InfoScreenViewModel @Inject constructor(
                         )
                         repository.insertPortfolio(portfolio = updatedPortfolio)
                         store.update { appState -> appState.copy(portfolio = updatedPortfolio) }
-                        stateFlow.value.stock?.let { repository.insertStock(it.copy(price = event.transaction.price)) }
+//                        stateFlow.value.stock?.let { repository.insertStock(it.copy(price = event.transaction.price)) }
                     }
                 }
             }

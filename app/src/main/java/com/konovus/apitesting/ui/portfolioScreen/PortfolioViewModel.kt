@@ -9,6 +9,7 @@ import com.konovus.apitesting.data.local.entities.Stock
 import com.konovus.apitesting.data.redux.AppState
 import com.konovus.apitesting.data.redux.Store
 import com.konovus.apitesting.data.repository.MainRepository
+import com.konovus.apitesting.util.Constants.TEN_MINUTES
 import com.konovus.apitesting.util.NetworkStatus
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
@@ -39,20 +40,14 @@ class PortfolioViewModel @Inject constructor(
         }
     }
 
-    private fun initSetup() {
-        viewModelScope.launch {
-            store.stateFlow.map{ it.portfolio }.filterNotNull().collectLatest { portfolio ->
-                val stocks = portfolio.stocksToShareAmount.mapNotNull {
-                    repository.getLocalStockBySymbol(it.key)
-                }
-                stateFlow.value = stateFlow.value.copy(portfolio = portfolio, stocks = stocks)
+    private fun initSetup() = viewModelScope.launch {
+        store.stateFlow.map{ it.portfolio }.filterNotNull().collectLatest { portfolio ->
+            val stocks = portfolio.stocksToShareAmount.mapNotNull {
+                repository.getLocalStockBySymbol(it.key)
             }
-        }
-    }
-
-    fun requestPortfolioUpdate(portfolio: Portfolio) {
-        viewModelScope.launch {
-            repository.updatePortfolioStocksPrices(portfolio)
+            stateFlow.value = stateFlow.value.copy(portfolio = portfolio, stocks = stocks)
+            if (portfolio.lastUpdatedTime + TEN_MINUTES < System.currentTimeMillis())
+                repository.updatePortfolioStocksPrices(portfolio)
         }
     }
 
@@ -61,7 +56,6 @@ class PortfolioViewModel @Inject constructor(
     }
 
     data class PortfolioScreenState(
-        val isLoading: Boolean = false,
         val portfolio: Portfolio? = null,
         val stocks: List<Stock> = emptyList(),
         val error: String? = null

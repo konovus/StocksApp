@@ -5,8 +5,8 @@ import androidx.paging.PagingSource
 import com.konovus.apitesting.data.api.AlphaVantageApi
 import com.konovus.apitesting.data.csv.CSVParser
 import com.konovus.apitesting.data.local.db.CompaniesDatabase
-import com.konovus.apitesting.data.local.entities.CompanyInfo
 import com.konovus.apitesting.data.local.entities.ChartData
+import com.konovus.apitesting.data.local.entities.CompanyInfo
 import com.konovus.apitesting.util.Constants.TAG
 import com.konovus.apitesting.util.Resource
 import kotlinx.coroutines.flow.Flow
@@ -80,6 +80,7 @@ class AlphaVantageRepository @Inject constructor(
     ): Resource<List<ChartData>> {
         return try {
             val response = api.getIntradayInfo(symbol = symbol, function = function.first )
+            Log.i(TAG, "getChartData: ${response.string()}")
             val results = csvParserIntraday.parse(response.byteStream())
             if (results.isEmpty())
                 return Resource.Error("Max 5 calls per minute reached!")

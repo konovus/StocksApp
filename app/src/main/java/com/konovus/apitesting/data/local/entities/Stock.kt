@@ -48,5 +48,10 @@ data class Stock(
         val employees: Int,
         val marketCap: String,
         val description: String
-    ): Parcelable
+    ): Parcelable {
+        override fun toString(): String = "DescriptionStats(" +
+                "exchange=$exchange, industry=$industry, sector=$sector, employees=$employees, " +
+                "marketCap=$marketCap, description=${description.substring(0,5)}...)"
+    }
+
 }

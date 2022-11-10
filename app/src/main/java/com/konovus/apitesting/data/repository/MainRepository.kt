@@ -58,6 +58,7 @@ class MainRepository @Inject constructor(
     }
 
     private suspend fun getUpdatedStockList(portfolio: Portfolio): List<Stock> {
+        if (portfolio.stocksToShareAmount.isEmpty()) return emptyList()
         val result = makeNetworkCall("updatePortfolioStockPrices") {
             yhFinanceApi.getMultipleQuotes(portfolio.stocksToShareAmount.keys.joinToString(","))
         }

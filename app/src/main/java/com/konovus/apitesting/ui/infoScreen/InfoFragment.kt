@@ -1,7 +1,6 @@
 package com.konovus.apitesting.ui.infoScreen
 
 import android.R.attr.fillColor
-import android.annotation.SuppressLint
 import android.os.Bundle
 import android.util.Log
 import android.view.View
@@ -13,7 +12,8 @@ import androidx.core.widget.doOnTextChanged
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.asFlow
-import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.asLiveData
+import androidx.lifecycle.distinctUntilChanged
 import androidx.lifecycle.map
 import androidx.navigation.fragment.navArgs
 import com.github.mikephil.charting.components.YAxis
@@ -26,18 +26,19 @@ import com.google.android.material.snackbar.Snackbar
 import com.konovus.apitesting.R
 import com.konovus.apitesting.data.local.entities.ChartData
 import com.konovus.apitesting.data.local.entities.OrderType
+import com.konovus.apitesting.data.local.entities.Stock
 import com.konovus.apitesting.data.local.entities.Transaction
 import com.konovus.apitesting.databinding.BottomSheetBinding
 import com.konovus.apitesting.databinding.InfoFragmentBinding
 import com.konovus.apitesting.transactionsItem
 import com.konovus.apitesting.util.Constants.TAG
 import com.konovus.apitesting.util.MpMarker
-import com.konovus.apitesting.util.NetworkStatus
 import com.konovus.apitesting.util.OnTabSelected
 import com.konovus.apitesting.util.toNDecimals
 import dagger.hilt.android.AndroidEntryPoint
-import kotlinx.coroutines.flow.*
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 
 
 @AndroidEntryPoint
@@ -47,26 +48,35 @@ class InfoFragment : Fragment(R.layout.info_fragment) {
     private val binding get() = _binding!!
     private val viewModel: InfoScreenViewModel by viewModels()
     private val args: InfoFragmentArgs by navArgs()
+    private lateinit var stock: Stock
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         _binding = InfoFragmentBinding.bind(view)
 
-        binding.bindVisibilityAndLoadingStates()
-        viewModel.state.map { it.chartData }.observe(viewLifecycleOwner, ::setupChart)
-        binding.setupListeners()
-        binding.bindTransactionsData()
+        bindState()
+        setupListeners()
+        bindTransactionsData()
         bindErrorHandling()
 
         requireActivity().findViewById<BottomNavigationView>(R.id.bottom_navigation).isVisible = false
     }
 
-    private fun InfoFragmentBinding.bindTransactionsData() = lifecycleScope.launch {
+    private fun bindState() {
+        viewModel.state.distinctUntilChanged().observe(viewLifecycleOwner) { state ->
+            Log.i(TAG, "bindState: $state")
+            binding.state = state
+            state.stock?.let { stock = it }
+            setupChart(state.chartData)
+        }
+    }
+
+    private fun bindTransactionsData() = binding.apply {
         combine(viewModel.store.stateFlow.map { it.portfolio?.transactions },
             viewModel.state.map { it.tabNr }.asFlow()) { transactions, tabNr ->
             Pair(transactions, tabNr)
-        }.distinctUntilChanged().collectLatest { pair ->
-            if (pair.first.isNullOrEmpty() || pair.second != 2) return@collectLatest
+        }.distinctUntilChanged().asLiveData().observe(viewLifecycleOwner) { pair ->
+            if (pair.first.isNullOrEmpty() || pair.second != 2) return@observe
 
             transactionsTab.epoxyRecyclerView.withModels {
                 pair.first!!.filter { it.symbol == args.symbol }.sortedByDescending { it.dateTime }
@@ -81,45 +91,16 @@ class InfoFragment : Fragment(R.layout.info_fragment) {
         }
     }
 
-
-    private fun InfoFragmentBinding.bindVisibilityAndLoadingStates() = lifecycleScope.launch {
-        combine(viewModel.state.asFlow(),
-                viewModel.store.stateFlow.map { it.networkStatus })  { state, networkStatus  ->
-            Pair(state, networkStatus)
-        }.distinctUntilChanged().collectLatest { pair ->
-            Log.i(TAG, "bindVisibilityAndLoadingAndLayoutStates: $pair")
-            val state = pair.first
-            val networkStatus = pair.second
-            state.stock?.let{ binding.stock = it }
-
-            progressBar.isVisible = state.isLoading && networkStatus != NetworkStatus.Unavailable
-            topWrap.isVisible = !state.isLoading && networkStatus != NetworkStatus.Unavailable
-            bottomWrap.isVisible = !state.isLoading && networkStatus != NetworkStatus.Unavailable
-            tradeBtn.isVisible = networkStatus != NetworkStatus.Unavailable
-            chart.visibility = if (!state.chartLoading) View.VISIBLE else View.INVISIBLE
-            progressChart.isVisible = state.chartLoading
-            progressTabs.isVisible = state.tabLoading
-            statisticsTab.root.visibility =
-                if (!state.tabLoading && state.tabNr == 0) View.VISIBLE else View.INVISIBLE
-            descriptionTab.root.visibility =
-                if (!state.tabLoading && state.tabNr == 1) View.VISIBLE else View.INVISIBLE
-            transactionsTab.root.visibility =
-                if (!state.tabLoading && state.tabNr == 2) View.VISIBLE else View.INVISIBLE
-            noTransactions.isVisible = state.transactions.isEmpty() && state.tabNr == 2
-        }
-    }
-
     private fun showBottomSheet() {
-        if (binding.stock == null || viewModel.store.stateFlow.value.portfolio == null) return
+        if (viewModel.store.stateFlow.value.portfolio == null) return
 
         val bottomSheet = BottomSheetDialog(requireContext())
         val bottomSheetBinding = BottomSheetBinding.inflate(layoutInflater)
         bottomSheet.setContentView(bottomSheetBinding.root)
         bottomSheet.show()
         bottomSheetBinding.apply {
-            symbolTv.text = binding.stock!!.symbol
-            @SuppressLint("SetTextI18n")
-            priceTv.text = "$${binding.stock!!.price}"
+            symbolTv.text = stock.symbol
+            priceTv.text = "$${stock.price}"
 
             var orderType = OrderType.Buy
             buySellSwitch.buyBtn.setOnClickListener {
@@ -151,8 +132,8 @@ class InfoFragment : Fragment(R.layout.info_fragment) {
         viewModel.onEvent(
             InfoScreenEvent.OnMarketOrderEvent(
                 Transaction(
-                    price = binding.stock!!.price,
-                    symbol = binding.stock!!.symbol,
+                    price = stock.price,
+                    symbol = stock.symbol,
                     amount = sumInput.text.toString().toDouble().toNDecimals(2),
                     dateTime = System.currentTimeMillis(),
                     orderType = orderType
@@ -173,7 +154,7 @@ class InfoFragment : Fragment(R.layout.info_fragment) {
             }
             val amountToSell = text.toString().toDouble()
             val amountOwned = portfolio.stocksToShareAmount.getValue(args.symbol).times(
-                binding.stock!!.price).toNDecimals(2)
+                stock.price).toNDecimals(2)
             if (amountToSell > amountOwned)
                 sumInputWrap.error = "Max to sell is $amountOwned"
             else sumInputWrap.error = null
@@ -184,47 +165,45 @@ class InfoFragment : Fragment(R.layout.info_fragment) {
         }
     }
 
-    private fun setupChart(chartData: List<ChartData>?) {
-        binding.apply {
-            if (chartData == null) return
-            val entries = mutableListOf<Entry>()
-            chartData.forEachIndexed { i, it ->
-                entries.add(Entry(i.toFloat(), it.close.toFloat()))
-            }
-
-            val axisLeft: YAxis = chart.axisLeft
-            axisLeft.textSize = 13f
-            axisLeft.textColor = ContextCompat.getColor(requireContext(), R.color.gray)
-            axisLeft.setLabelCount(4, true)
-            axisLeft.setDrawGridLines(false)
-            axisLeft.setDrawAxisLine(false)
-
-            val lineDataSet = LineDataSet(entries, "Default entries")
-            val lineData = LineData(lineDataSet)
-            lineDataSet.setDrawFilled(true)
-            val fillGradient = ContextCompat.getDrawable(requireContext(), R.drawable.chart_gradient)
-            lineDataSet.fillDrawable = fillGradient
-            lineDataSet.setDrawCircles(false)
-            lineDataSet.setDrawValues(false)
-            lineDataSet.mode = LineDataSet.Mode.CUBIC_BEZIER
-            lineDataSet.setDrawHorizontalHighlightIndicator(false)
-            val marker = MpMarker( chart, binding.mpMarkerTv, binding.scrollView)
-
-            chart.marker = marker
-            chart.axisRight.isEnabled = false
-            chart.xAxis.isEnabled = false
-            chart.legend.isEnabled = false
-            chart.extraBottomOffset = 10f
-            chart.data = lineData
-            chart.setBackgroundColor(fillColor)
-            chart.setDrawBorders(false)
-            chart.description.isEnabled = false
-            chart.setPinchZoom(false)
-            chart.invalidate()
+    private fun setupChart(chartData: List<ChartData>?) = binding.apply {
+        if (chartData == null) return@apply
+        val entries = mutableListOf<Entry>()
+        chartData.forEachIndexed { i, it ->
+            entries.add(Entry(i.toFloat(), it.close.toFloat()))
         }
+
+        val axisLeft: YAxis = chart.axisLeft
+        axisLeft.textSize = 13f
+        axisLeft.textColor = ContextCompat.getColor(requireContext(), R.color.gray)
+        axisLeft.setLabelCount(4, true)
+        axisLeft.setDrawGridLines(false)
+        axisLeft.setDrawAxisLine(false)
+
+        val lineDataSet = LineDataSet(entries, "Default entries")
+        val lineData = LineData(lineDataSet)
+        lineDataSet.setDrawFilled(true)
+        val fillGradient = ContextCompat.getDrawable(requireContext(), R.drawable.chart_gradient)
+        lineDataSet.fillDrawable = fillGradient
+        lineDataSet.setDrawCircles(false)
+        lineDataSet.setDrawValues(false)
+        lineDataSet.mode = LineDataSet.Mode.CUBIC_BEZIER
+        lineDataSet.setDrawHorizontalHighlightIndicator(false)
+        val marker = MpMarker( chart, binding.mpMarkerTv, binding.scrollView)
+
+        chart.marker = marker
+        chart.axisRight.isEnabled = false
+        chart.xAxis.isEnabled = false
+        chart.legend.isEnabled = false
+        chart.extraBottomOffset = 10f
+        chart.data = lineData
+        chart.setBackgroundColor(fillColor)
+        chart.setDrawBorders(false)
+        chart.description.isEnabled = false
+        chart.setPinchZoom(false)
+        chart.invalidate()
     }
 
-    private fun InfoFragmentBinding.setupListeners() {
+    private fun setupListeners() = binding.apply {
         backArrow.setOnClickListener { requireActivity().onBackPressed() }
         follow.setOnClickListener { viewModel.onEvent(InfoScreenEvent.OnFavorite(stock))}
         tradeBtn.setOnClickListener { showBottomSheet() }

@@ -41,16 +41,14 @@ class MainFragment : Fragment(R.layout.main_fragment), FavoritesAdapter.OnItemCl
         super.onViewCreated(view, savedInstanceState)
         _binding = MainFragmentBinding.bind(view)
 
-        binding.apply {
-            bindPortfolioData()
-            bindFavoritesData()
-            bindTrendingData()
-        }
+        bindPortfolioData()
+        bindFavoritesData()
+        bindTrendingData()
         bindErrorHandling()
         setupListeners()
     }
 
-    private fun MainFragmentBinding.bindFavoritesData() {
+    private fun bindFavoritesData() = binding.apply {
         combine(viewModel.state.map { it.favoritesList }.asFlow(),
             viewModel.store.stateFlow.map { it.chartData }) { favorites, chartData ->
             Pair(favorites, chartData)
@@ -88,7 +86,7 @@ class MainFragment : Fragment(R.layout.main_fragment), FavoritesAdapter.OnItemCl
         }
     }
 
-    private fun MainFragmentBinding.bindTrendingData() {
+    private fun bindTrendingData() = binding.apply {
         viewModel.store.stateFlow.map { it.trendingStocks }.asLiveData().observe(viewLifecycleOwner) { list ->
                 if (list.isNotEmpty()) {
                     recyclerViewTrending.withModels {
@@ -117,17 +115,14 @@ class MainFragment : Fragment(R.layout.main_fragment), FavoritesAdapter.OnItemCl
         }
     }
 
-    private fun MainFragmentBinding.bindPortfolioData() {
-        lifecycleScope.launch {
-            viewModel.store.stateFlow.map { it.portfolio }.distinctUntilChanged()
-                .filterNotNull().asLiveData().observe(viewLifecycleOwner) {
-                Log.i(TAG, "getPortfolioData: $it , ${it.stocksToShareAmount}")
-                portfolio = it
-                if (it.lastUpdatedTime + TEN_MINUTES < System.currentTimeMillis() && it.stocksToShareAmount.isNotEmpty())
-                    viewModel.onEvent(MainScreenEvents.OnRequestPortfolioUpdate(it))
-            }
+    private fun bindPortfolioData() = lifecycleScope.launch {
+        viewModel.store.stateFlow.map { it.portfolio }.distinctUntilChanged()
+            .filterNotNull().asLiveData().observe(viewLifecycleOwner) {
+            Log.i(TAG, "getPortfolioData: $it , ${it.stocksToShareAmount}")
+            binding.portfolio = it
         }
     }
+
 
     private fun bindErrorHandling() {
         viewModel.state.map { it.error }.observe(viewLifecycleOwner) { error ->

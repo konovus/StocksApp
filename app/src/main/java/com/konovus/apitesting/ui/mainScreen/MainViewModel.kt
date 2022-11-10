@@ -46,9 +46,16 @@ class MainViewModel @Inject constructor(
 
     private fun initSetup() {
         getOrCreateDefaultPortfolio()
+        updatePortfolioStocksPrices()
         getTrendingStocks()
         getFavoritesNr()
         getFavoritesStocksFromDb()
+    }
+
+    private fun updatePortfolioStocksPrices() = viewModelScope.launch {
+        if ( store.stateFlow.value.portfolio != null &&
+            store.stateFlow.value.portfolio!!.lastUpdatedTime + TEN_MINUTES < System.currentTimeMillis())
+            repository.updatePortfolioStocksPrices(store.stateFlow.value.portfolio!!)
     }
 
     private fun getFavoritesNr() = viewModelScope.launch {
@@ -92,7 +99,7 @@ class MainViewModel @Inject constructor(
     fun updateFavoritesChartData(localFavs: List<Stock>) = viewModelScope.launch {
         if (!store.stateFlow.value.chartData.map { it.key }.containsAll(localFavs.map {
                 it.symbol + TIME_SPANS[0].first + TIME_SPANS[0].second })
-                && !stateFlow.value.isUpdatingChartsData) {
+            && !stateFlow.value.isUpdatingChartsData) {
             stateFlow.value = stateFlow.value.copy(favoritesLoading = true, isUpdatingChartsData = true)
             val responseChartData = repository.makeNetworkCall(
                 "chartData ${localFavs.joinToString(",") { it.symbol }}"
@@ -129,35 +136,34 @@ class MainViewModel @Inject constructor(
         }
     }
 
-    private fun getTrendingStocks() {
-        viewModelScope.launch {
-            stateFlow.value = stateFlow.value.copy(trendingLoading = true)
-            val result = repository.makeNetworkCall("trending") {
-                yhFinanceApi.getTrendingStocks()
-            }
-            processNetworkResult(result) { data ->
-                store.update { appState ->
-                    appState.copy(
-                        trendingStocks = data.finance.result.first().quotes.map { it.toStock() }
-                            .filter { it.quoteType == "EQUITY" }
-                    )
-                }
-            }
-            stateFlow.value = stateFlow.value.copy(trendingLoading = false)
+    private fun getTrendingStocks() = viewModelScope.launch {
+        stateFlow.value = stateFlow.value.copy(trendingLoading = true)
+        val result = repository.makeNetworkCall("trending") {
+            yhFinanceApi.getTrendingStocks()
         }
+        processNetworkResult(result) { data ->
+            store.update { appState ->
+                appState.copy(
+                    trendingStocks = data.finance.result.first().quotes.map { it.toStock() }
+                        .filter { it.quoteType == "EQUITY" }
+                )
+            }
+        }
+        stateFlow.value = stateFlow.value.copy(trendingLoading = false)
     }
 
 
-    fun onEvent(event: MainScreenEvents) {
-        when (event) {
-            is MainScreenEvents.OnRequestPortfolioUpdate -> viewModelScope.launch {
-                //todo
-                stateFlow.value = stateFlow.value.copy(isUpdatingPortfolio = true)
-                repository.updatePortfolioStocksPrices(event.portfolio)
-                stateFlow.value = stateFlow.value.copy(isUpdatingPortfolio = false)
-            }
-        }
-    }
+
+//        fun onEvent(event: MainScreenEvents) {
+//            when (event) {
+//                is MainScreenEvents.OnRequestPortfolioUpdate -> viewModelScope.launch {
+//                    //todo
+//                    stateFlow.value = stateFlow.value.copy(isUpdatingPortfolio = true)
+//                    repository.updatePortfolioStocksPrices(event.portfolio)
+//                    stateFlow.value = stateFlow.value.copy(isUpdatingPortfolio = false)
+//                }
+//            }
+//        }
 
     private fun <T> processNetworkResult(
         result: Resource<T>,
@@ -180,12 +186,12 @@ class MainViewModel @Inject constructor(
     private fun getOrCreateDefaultPortfolio() = viewModelScope.launch {
         if (store.stateFlow.value.portfolio == null)
             repository.getPortfolioById(1)?.let { portfolio ->
-            store.update { it.copy(portfolio = portfolio) }
-        } ?: run {
-            val portfolio = Portfolio(name = "Default", id = 1)
-            store.update { it.copy(portfolio = portfolio) }
-            repository.insertPortfolio(portfolio)
-        }
+                store.update { it.copy(portfolio = portfolio) }
+            } ?: run {
+                val portfolio = Portfolio(name = "Default", id = 1)
+                store.update { it.copy(portfolio = portfolio) }
+                repository.insertPortfolio(portfolio)
+            }
     }
 
     fun clearError() {
@@ -205,11 +211,6 @@ class MainViewModel @Inject constructor(
         val favoritesLoading: Boolean = false,
         val error: String? = null,
     )
-}
-
-
-sealed class MainScreenEvents {
-    data class OnRequestPortfolioUpdate(val portfolio: Portfolio): MainScreenEvents()
 }
 
 
