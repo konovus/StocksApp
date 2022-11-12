@@ -9,9 +9,4 @@ It has the following jetpack architecture components:
   - Pagination
   - and others.
 
-![alt text]((https://ibb.co/Dpzs6N4
-https://ibb.co/gw7McgN
-https://ibb.co/c6yLFns
-https://ibb.co/7vBthqY
-https://ibb.co/pX1XG4P
-https://ibb.co/s9S1MXK))
+![alt text](https://ibb.co/Dpzs6N4)
