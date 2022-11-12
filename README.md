@@ -8,3 +8,5 @@ It has the following jetpack architecture components:
   - Navigation
   - Pagination
   - and others.
+
+![alt text](https://mega.nz/file/No1XzCaS#14Nfpw3IR5DXuI4RWO0BPu2TBSFhmz8NVU-qa5lBfck)
