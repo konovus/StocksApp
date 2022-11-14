@@ -6,7 +6,6 @@ import android.view.View
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
-import androidx.lifecycle.asFlow
 import androidx.lifecycle.asLiveData
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.map
@@ -49,10 +48,9 @@ class MainFragment : Fragment(R.layout.main_fragment), FavoritesAdapter.OnItemCl
     }
 
     private fun bindFavoritesData() = binding.apply {
-        combine(viewModel.state.map { it.favoritesList }.asFlow(),
-            viewModel.store.stateFlow.map { it.chartData }) { favorites, chartData ->
-            Pair(favorites, chartData)
-        }.distinctUntilChanged().asLiveData().observe(viewLifecycleOwner) { pair ->
+        combine(viewModel.favorites,
+            viewModel.store.stateFlow.map { it.chartData }, ::Pair)
+            .distinctUntilChanged().asLiveData().observe(viewLifecycleOwner) { pair ->
             val stocks = pair.first
             val chartData = pair.second
             Log.i(TAG, "favorites list MF: ${stocks.map { Triple(it.id, it.symbol, it.lastUpdatedTime) }} | $chartData |$stocks ")
@@ -87,23 +85,18 @@ class MainFragment : Fragment(R.layout.main_fragment), FavoritesAdapter.OnItemCl
     }
 
     private fun bindTrendingData() = binding.apply {
-        viewModel.store.stateFlow.map { it.trendingStocks }.asLiveData().observe(viewLifecycleOwner) { list ->
-                if (list.isNotEmpty()) {
-                    recyclerViewTrending.withModels {
-                        list.forEach {
-                            trendingItem { setupEachTrendingItem(it) }
-                        }
+        viewModel.trendingStocks.observe(viewLifecycleOwner) { list ->
+                recyclerViewTrending.withModels {
+                    list.forEach {
+                        trendingItem { setupEachTrendingItem(it) }
                     }
                 }
-            }
-
-        viewModel.state.map { it.trendingLoading }.observe(viewLifecycleOwner) {
-            trendingShimmerLayout.root.isVisible = it
-            recyclerViewTrending.isVisible = !it
-            if (it)
+            trendingShimmerLayout.root.isVisible = list.isEmpty()
+            recyclerViewTrending.isVisible = list.isNotEmpty()
+            if (list.isEmpty())
                 trendingShimmerLayout.root.startShimmer()
             else trendingShimmerLayout.root.stopShimmer()
-        }
+            }
     }
 
     private fun TrendingItemBindingModelBuilder.setupEachTrendingItem(stock: Stock) {
@@ -125,12 +118,10 @@ class MainFragment : Fragment(R.layout.main_fragment), FavoritesAdapter.OnItemCl
 
 
     private fun bindErrorHandling() {
-        viewModel.state.map { it.error }.observe(viewLifecycleOwner) { error ->
-            if (error != null) {
-                Snackbar.make(binding.root, error, Snackbar.LENGTH_LONG).show()
-                viewModel.clearError()
+        viewModel.event.asLiveData().observe(viewLifecycleOwner) { message ->
+            Log.i(TAG, "bindErrorHandling: $message")
+                Snackbar.make(binding.root, message, Snackbar.LENGTH_LONG).show()
             }
-        }
     }
 
     private fun setupListeners() {
@@ -141,8 +132,14 @@ class MainFragment : Fragment(R.layout.main_fragment), FavoritesAdapter.OnItemCl
     }
 
     override fun onFavoriteItemClick(stock: Stock) {
+        Log.i(TAG, "onFavoriteItemClick: $stock")
         val action = MainFragmentDirections.actionMainFragmentToInfoFragment(stock.name, stock.symbol)
         findNavController().navigate(action)
+    }
+
+    override fun onDestroy() {
+        _binding = null
+        super.onDestroy()
     }
 
 }

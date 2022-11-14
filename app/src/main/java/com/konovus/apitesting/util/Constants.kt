@@ -9,7 +9,7 @@ object Constants {
     val TIME_SPANS: List<Pair<String, Int>> = listOf(
         Pair("TIME_SERIES_INTRADAY", 16),
         Pair("TIME_SERIES_INTRADAY", 80),
-        Pair("TIME_SERIES_DAILY", 30),
+        Pair("TIME_SERIES_DAILY_ADJUSTED", 30),
         Pair("TIME_SERIES_WEEKLY", 26),
         Pair("TIME_SERIES_WEEKLY", 52),
     )

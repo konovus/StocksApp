@@ -57,6 +57,8 @@ class MainRepository @Inject constructor(
         }
     }
 
+
+
     private suspend fun getUpdatedStockList(portfolio: Portfolio): List<Stock> {
         if (portfolio.stocksToShareAmount.isEmpty()) return emptyList()
         val result = makeNetworkCall("updatePortfolioStockPrices") {
@@ -77,6 +79,7 @@ class MainRepository @Inject constructor(
     }
 
     suspend fun updatePortfolioStocksPrices(portfolio: Portfolio) {
+        Log.i(TAG, "updatePortfolioStocksPrices...")
         val updatedList = getUpdatedStockList(portfolio)
         var updatedBalance = 0.0
         updatedList.forEach {
@@ -95,56 +98,6 @@ class MainRepository @Inject constructor(
         store.update { it.copy(portfolio = updatedPortfolio) }
         updatePortfolio(portfolio = updatedPortfolio)
     }
-
-//    private suspend fun getUpdatedBalanceForMultipleStocks(portfolio: Portfolio): Double {
-//        var updatedBalance = 0.0
-//        val nr = portfolio.stocksToShareAmount.keys.size
-//        val localList = mutableListOf<Stock>()
-//        val updatedList = mutableListOf<Stock>()
-//        var result: Resource<LinkedTreeMap<String, PriceResponse>>?
-//        for (i in 0..nr step 8) {
-//            val symbols = portfolio.stocksToShareAmount.keys.filterIndexed { index, _ -> index in i..i+7}
-//                .joinToString(",")
-//            result = makeNetworkCall(symbols) {
-//                twelveApi.getPricesForStocks(symbols)
-//            }
-//            if (result.data == null) return updatedBalance
-//            localList.addAll(
-//                result.data!!.filterNot {
-//                it.value.toString().contains("null")
-//                }.mapNotNull { getLocalStockBySymbol(it.key) }
-//            )
-//
-//            localList.map { localStock ->
-//                updatedList.add( localStock.copy(
-//                    price = result.data!![localStock.symbol]!!.price.toDouble().toNDecimals(2)
-//                    )
-//                )
-//            }
-//
-//            localList.clear()
-//            if (nr > 8 && i <= nr - 8)
-//                delay(60 * 1000)
-//        }
-//
-//        insertStocks(updatedList)
-//        updatedList.forEach {
-//            updatedBalance += it.price * portfolio.stocksToShareAmount[it.symbol]!!
-//        }
-//        return updatedBalance
-//    }
-
-//    private suspend fun getUpdatedBalanceForSingleStock(portfolio: Portfolio): Double {
-//        val localStock = getLocalStockBySymbol(portfolio.stocksToShareAmount.keys.first())!!
-//        val result = makeNetworkCall("portfolio stock price update") {
-//            twelveApi.getPriceForStock(portfolio.stocksToShareAmount.keys.first())
-//        }
-//        val price = if (result.data == null || result.data.values.first().contains("null"))
-//            localStock.price
-//        else result.data.values.first().toDouble().toNDecimals(2)
-//        insertStock(localStock.copy(price = price))
-//        return price * portfolio.stocksToShareAmount.values.first()
-//    }
 
     suspend fun getPortfolioById(id: Int): Portfolio? = portfolioDao.getPortfolioById(id)
 
@@ -166,5 +119,8 @@ class MainRepository @Inject constructor(
 
     suspend fun insertPortfolio(portfolio: Portfolio) = portfolioDao.insertPortfolio(portfolio)
 
+    fun portfolioCount() = portfolioDao.portfolioCount()
+
+    fun getPortfoliosFlow() = portfolioDao.getAllPortfolios()
 
 }

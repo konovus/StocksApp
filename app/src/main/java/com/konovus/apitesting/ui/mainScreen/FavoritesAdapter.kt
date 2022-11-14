@@ -66,6 +66,10 @@ class FavoritesAdapter(private val listener: OnItemClickListener) :
         }
     }
 
+    override fun submitList(list: List<FavoritesRVItem>?) {
+        super.submitList(list?.let { ArrayList(it) })
+    }
+
     private fun setupChart(chartData: List<ChartData>, chart: LineChart, context: Context) {
         chart.onTouchListener = null
 

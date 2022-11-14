@@ -9,7 +9,6 @@ import androidx.lifecycle.viewModelScope
 import com.konovus.apitesting.R
 import com.konovus.apitesting.data.api.YhFinanceApi
 import com.konovus.apitesting.data.local.entities.ChartData
-import com.konovus.apitesting.data.local.entities.Portfolio
 import com.konovus.apitesting.data.local.entities.Stock
 import com.konovus.apitesting.data.redux.AppState
 import com.konovus.apitesting.data.redux.Store
@@ -20,10 +19,9 @@ import com.konovus.apitesting.util.Constants.TIME_SPANS
 import com.konovus.apitesting.util.NetworkStatus
 import com.konovus.apitesting.util.Resource
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.collectLatest
-import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -38,6 +36,17 @@ class MainViewModel @Inject constructor(
     private val stateFlow = MutableStateFlow(MainScreenStates())
     val state: LiveData<MainScreenStates> = stateFlow.asLiveData()
 
+    val favorites = repository.getFavoritesFlow().map { list ->
+        store.update { it.copy(favorites = list.map { it.symbol }) }
+        list.sortedByDescending { it.id }
+    }
+
+    private val _trendingStocks = MutableStateFlow(emptyList<Stock>())
+    val trendingStocks: LiveData<List<Stock>> = _trendingStocks.asLiveData()
+
+    private val eventChannel = Channel<String>()
+    val event = eventChannel.receiveAsFlow()
+
     init {
         observeConnectivity()
         if (store.stateFlow.value.networkStatus == NetworkStatus.Available)
@@ -45,17 +54,24 @@ class MainViewModel @Inject constructor(
     }
 
     private fun initSetup() {
-        getOrCreateDefaultPortfolio()
-        updatePortfolioStocksPrices()
+        getDefaultPortfolio()
+//        updatePortfolioStocksPrices()
         getTrendingStocks()
         getFavoritesNr()
-        getFavoritesStocksFromDb()
+//        getFavoritesStocksFromDb()
+    }
+
+    private fun sendEvent(message: String) = viewModelScope.launch {
+        eventChannel.send(message)
     }
 
     private fun updatePortfolioStocksPrices() = viewModelScope.launch {
-        if ( store.stateFlow.value.portfolio != null &&
-            store.stateFlow.value.portfolio!!.lastUpdatedTime + TEN_MINUTES < System.currentTimeMillis())
-            repository.updatePortfolioStocksPrices(store.stateFlow.value.portfolio!!)
+        while (true) {
+            if (store.stateFlow.value.portfolio != null &&
+                store.stateFlow.value.portfolio!!.lastUpdatedTime + TEN_MINUTES < System.currentTimeMillis())
+                repository.updatePortfolioStocksPrices(store.stateFlow.value.portfolio!!)
+            delay(TEN_MINUTES.toLong())
+        }
     }
 
     private fun getFavoritesNr() = viewModelScope.launch {
@@ -90,7 +106,7 @@ class MainViewModel @Inject constructor(
                 Log.i(TAG, "updateFavoritesQuotes: ${updatedStocks.map { Pair(it.symbol, it.lastUpdatedTime) }}")
                 repository.updateStocks(stocks = updatedStocks)
             } else {
-                stateFlow.value = stateFlow.value.copy(error = responseMultipleQuotes.message)
+                sendEvent(message = responseMultipleQuotes.message.orEmpty())
             }
             stateFlow.value = stateFlow.value.copy(favoritesLoading = false, isUpdatingQuotes = false)
         }
@@ -119,7 +135,7 @@ class MainViewModel @Inject constructor(
                     appState.copy(chartData = map)
                 }
             } else {
-                stateFlow.value = stateFlow.value.copy(error = responseChartData.message)
+                sendEvent(message = responseChartData.message.orEmpty())
             }
             stateFlow.value = stateFlow.value.copy(favoritesLoading = false, isUpdatingChartsData = false)
         }
@@ -137,33 +153,33 @@ class MainViewModel @Inject constructor(
     }
 
     private fun getTrendingStocks() = viewModelScope.launch {
-        stateFlow.value = stateFlow.value.copy(trendingLoading = true)
-        val result = repository.makeNetworkCall("trending") {
-            yhFinanceApi.getTrendingStocks()
-        }
-        processNetworkResult(result) { data ->
-            store.update { appState ->
-                appState.copy(
-                    trendingStocks = data.finance.result.first().quotes.map { it.toStock() }
-                        .filter { it.quoteType == "EQUITY" }
-                )
-            }
-        }
-        stateFlow.value = stateFlow.value.copy(trendingLoading = false)
+        val response = repository.makeNetworkCall("trending") { yhFinanceApi.getTrendingStocks() }
+        if (response is Resource.Success && response.data != null) {
+            val stocks = response.data.finance.result.first().quotes.map { it.toStock() }
+                .filter { it.quoteType == "EQUITY" }
+            if (stocks.isEmpty()) sendEvent("No trending stocks.")
+            _trendingStocks.value = stocks
+        } else if (response is Resource.Error)
+            sendEvent(response.message.toString().ifEmpty { "Unexpected error occurred." })
     }
 
-
-
-//        fun onEvent(event: MainScreenEvents) {
-//            when (event) {
-//                is MainScreenEvents.OnRequestPortfolioUpdate -> viewModelScope.launch {
-//                    //todo
-//                    stateFlow.value = stateFlow.value.copy(isUpdatingPortfolio = true)
-//                    repository.updatePortfolioStocksPrices(event.portfolio)
-//                    stateFlow.value = stateFlow.value.copy(isUpdatingPortfolio = false)
-//                }
+//    private fun getTrendingStocks() = viewModelScope.launch {
+//        stateFlow.value = stateFlow.value.copy(trendingLoading = true)
+//        val result = repository.makeNetworkCall("trending") {
+//            yhFinanceApi.getTrendingStocks()
+//        }
+//        processNetworkResult(result) { data ->
+//            val stocks = data.finance.result.first().quotes.map { it.toStock() }
+//                .filter { it.quoteType == "EQUITY" }
+//            if (stocks.isEmpty()) return@processNetworkResult
+//            store.update { appState ->
+//                appState.copy(
+//                    trendingStocks = stocks
+//                )
 //            }
 //        }
+//        stateFlow.value = stateFlow.value.copy(trendingLoading = false)
+//    }
 
     private fun <T> processNetworkResult(
         result: Resource<T>,
@@ -176,26 +192,18 @@ class MainViewModel @Inject constructor(
                 }
                 is Resource.Loading -> stateFlow.value = stateFlow.value.copy(isLoading = true)
                 is Resource.Error -> {
-                    stateFlow.value =
-                        stateFlow.value.copy(error = result.message, isLoading = false)
+                    sendEvent(message = result.message.orEmpty())
                 }
             }
         }
     }
 
-    private fun getOrCreateDefaultPortfolio() = viewModelScope.launch {
-        if (store.stateFlow.value.portfolio == null)
-            repository.getPortfolioById(1)?.let { portfolio ->
-                store.update { it.copy(portfolio = portfolio) }
-            } ?: run {
-                val portfolio = Portfolio(name = "Default", id = 1)
-                store.update { it.copy(portfolio = portfolio) }
-                repository.insertPortfolio(portfolio)
-            }
-    }
-
-    fun clearError() {
-        stateFlow.value = stateFlow.value.copy(error = null)
+    private fun getDefaultPortfolio() = viewModelScope.launch {
+        repository.getPortfoliosFlow().collectLatest { list ->
+            Log.i(TAG, "getDefaultPortfolio: $list")
+            if (list.isEmpty()) return@collectLatest
+            store.update { it.copy(portfolio = list.first()) }
+        }
     }
 
     data class MainScreenStates(
@@ -211,6 +219,10 @@ class MainViewModel @Inject constructor(
         val favoritesLoading: Boolean = false,
         val error: String? = null,
     )
+
+    sealed class Event{
+        data class ErrorEvent(val message: String): Event()
+    }
 }
 
 

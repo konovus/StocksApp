@@ -28,6 +28,7 @@ class PortfolioViewModel @Inject constructor(
     init {
         observeConnectivity()
         initSetup()
+
     }
 
     private fun observeConnectivity() {

@@ -22,10 +22,8 @@ import com.konovus.apitesting.util.Resource
 import com.konovus.apitesting.util.toNDecimals
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.async
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.collectLatest
-import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -41,11 +39,18 @@ class InfoScreenViewModel @Inject constructor(
     private var stateFlow = MutableStateFlow(InfoScreenStates())
     val state = stateFlow.asLiveData()
 
+    private val eventChannel = Channel<String>()
+    val event = eventChannel.receiveAsFlow()
+
     val symbol = savedStateHandle.get<String>("symbol")!!
 
     init {
         observeConnectivity()
         initSetup()
+    }
+
+    private fun sendEvent(message: String) = viewModelScope.launch {
+        eventChannel.send(message)
     }
 
     private fun observeConnectivity() {
@@ -135,7 +140,6 @@ class InfoScreenViewModel @Inject constructor(
                         )
                         repository.insertPortfolio(portfolio = updatedPortfolio)
                         store.update { appState -> appState.copy(portfolio = updatedPortfolio) }
-//                        stateFlow.value.stock?.let { repository.insertStock(it.copy(price = event.transaction.price)) }
                     }
                 }
             }
@@ -203,10 +207,6 @@ class InfoScreenViewModel @Inject constructor(
         )
     }
 
-    fun clearError() {
-        stateFlow.value = stateFlow.value.copy(error = null)
-    }
-
     private fun <T> processNetworkResult(
         result: Resource<T>,
         processBlock: suspend (T) -> Unit
@@ -218,8 +218,8 @@ class InfoScreenViewModel @Inject constructor(
                 }
                 is Resource.Loading -> stateFlow.value = stateFlow.value.copy(isLoading = true)
                 is Resource.Error -> {
-                    stateFlow.value =
-                        stateFlow.value.copy(error = result.message,
+                    sendEvent(message = result.message.orEmpty())
+                    stateFlow.value = stateFlow.value.copy(
                             isLoading = false, tabLoading = false, chartLoading = false)
                 }
             }

@@ -2,6 +2,7 @@ package com.konovus.apitesting.data.api
 
 import com.konovus.apitesting.BuildConfig.API_KEY_ALPHA_VANTAGE
 import okhttp3.ResponseBody
+import retrofit2.Response
 import retrofit2.http.GET
 import retrofit2.http.Query
 
@@ -19,6 +20,6 @@ interface AlphaVantageApi {
         @Query("function") function: String = "TIME_SERIES_INTRADAY",
         @Query("symbol") symbol: String,
         @Query("apikey") apikey: String = API_KEY_ALPHA_VANTAGE
-    ): ResponseBody
+    ): Response<ResponseBody>
 
 }

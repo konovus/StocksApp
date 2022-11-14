@@ -80,16 +80,17 @@ class AlphaVantageRepository @Inject constructor(
     ): Resource<List<ChartData>> {
         return try {
             val response = api.getIntradayInfo(symbol = symbol, function = function.first )
-            Log.i(TAG, "getChartData: ${response.string()}")
-            val results = csvParserIntraday.parse(response.byteStream())
-            if (results.isEmpty())
-                return Resource.Error("Max 5 calls per minute reached!")
-            Collections.sort(results) { r1, r2 ->
-                if (function.first.endsWith("INTRADAY"))
-                    if (r1.toLocalDateTime().isBefore(r2.toLocalDateTime())) return@sort -1 else return@sort 1
-                else if (r1.toLocalDate().isBefore(r2.toLocalDate())) return@sort -1 else return@sort 1
-            }
-            Resource.Success(results.takeLast(function.second))
+            if (response.isSuccessful && response.body() != null) {
+                val results = csvParserIntraday.parse(response.body()!!.byteStream())
+                if (results.isEmpty())
+                    return Resource.Error("Max 5 calls per minute reached.")
+                Collections.sort(results) { r1, r2 ->
+                    if (function.first.endsWith("INTRADAY"))
+                        if (r1.toLocalDateTime().isBefore(r2.toLocalDateTime())) return@sort -1 else return@sort 1
+                    else if (r1.toLocalDate().isBefore(r2.toLocalDate())) return@sort -1 else return@sort 1
+                }
+                Resource.Success(results.takeLast(function.second))
+            } else Resource.Error("${response.code()}: ${response.message()}")
         } catch (e: IOException) {
             e.printStackTrace()
             Resource.Error("Couldn't load data.")

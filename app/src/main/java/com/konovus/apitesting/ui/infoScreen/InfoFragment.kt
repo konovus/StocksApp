@@ -220,11 +220,8 @@ class InfoFragment : Fragment(R.layout.info_fragment) {
     }
 
     private fun bindErrorHandling() {
-        viewModel.state.map { it.error }.observe(viewLifecycleOwner) { error ->
-            if (error != null) {
-                Snackbar.make(binding.root, error, Snackbar.LENGTH_LONG).show()
-                viewModel.clearError()
-            }
+        viewModel.event.asLiveData().observe(viewLifecycleOwner) { message ->
+                Snackbar.make(binding.root, message, Snackbar.LENGTH_LONG).show()
         }
     }
 

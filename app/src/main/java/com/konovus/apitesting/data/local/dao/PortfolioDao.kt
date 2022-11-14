@@ -14,6 +14,12 @@ interface PortfolioDao {
     @Insert(onConflict = REPLACE)
     suspend fun insertPortfolio(portfolio: Portfolio)
 
+    @Insert(onConflict = REPLACE)
+    fun prepopulatePortfolioDB(portfolio: Portfolio)
+
+    @Query("select count(id) from portfolios_table")
+    fun portfolioCount(): Int
+
     @Update(onConflict = REPLACE)
     suspend fun updatePortfolio(portfolio: Portfolio)
 

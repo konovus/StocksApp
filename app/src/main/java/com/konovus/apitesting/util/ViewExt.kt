@@ -5,6 +5,7 @@ import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Color
 import android.view.View
+import java.util.concurrent.Executors
 import androidx.appcompat.widget.SearchView
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
@@ -130,6 +131,17 @@ suspend fun clearDataStore(key: String, context: Context) {
     context.dataStore.edit { settings ->
         settings.remove(dataStoreKey)
     }
+}
+
+
+
+private val IO_EXECUTOR = Executors.newSingleThreadExecutor()
+
+/**
+ * Utility method to run blocks on a dedicated background thread, used for io/database work.
+ */
+fun ioThread(f : () -> Unit) {
+    IO_EXECUTOR.execute(f)
 }
 
 //create a bitmap using view height and width to draw to it
