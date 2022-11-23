@@ -42,6 +42,7 @@ class SearchViewModel @Inject constructor(
         getCompanyListings()
     }
 
+    //todo
     private fun observeConnectivity() {
         viewModelScope.launch {
             store.stateFlow.map { it.networkStatus }.distinctUntilChanged().collectLatest {

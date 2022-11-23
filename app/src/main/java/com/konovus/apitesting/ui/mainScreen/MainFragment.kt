@@ -7,26 +7,27 @@ import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.asLiveData
+import androidx.lifecycle.distinctUntilChanged
 import androidx.lifecycle.lifecycleScope
-import androidx.lifecycle.map
 import androidx.navigation.fragment.findNavController
 import com.google.android.material.snackbar.Snackbar
 import com.konovus.apitesting.R
 import com.konovus.apitesting.TrendingItemBindingModelBuilder
-import com.konovus.apitesting.data.local.entities.FavoritesRVItem
 import com.konovus.apitesting.data.local.entities.Stock
+import com.konovus.apitesting.data.local.models.FavoritesUiModel
+import com.konovus.apitesting.data.local.models.Quote
 import com.konovus.apitesting.databinding.MainFragmentBinding
 import com.konovus.apitesting.trendingItem
 import com.konovus.apitesting.ui.MainActivity
 import com.konovus.apitesting.util.Constants.TAG
 import com.konovus.apitesting.util.Constants.TEN_MINUTES
 import com.konovus.apitesting.util.Constants.TIME_SPANS
+import com.konovus.apitesting.util.NetworkConnectionObserver
+import com.konovus.apitesting.util.NetworkStatus
 import dagger.hilt.android.AndroidEntryPoint
-import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.filterNotNull
-import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import javax.inject.Inject
 
 
 @AndroidEntryPoint
@@ -35,68 +36,90 @@ class MainFragment : Fragment(R.layout.main_fragment), FavoritesAdapter.OnItemCl
     private var _binding: MainFragmentBinding? = null
     private val binding get() = _binding!!
     private val viewModel: MainViewModel by viewModels()
+    private var refreshData: Job? = null
+
+    @Inject
+    lateinit var networkConnectionObserver: NetworkConnectionObserver
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         _binding = MainFragmentBinding.bind(view)
 
+        observeNetworkConnectivity()
         bindPortfolioData()
         bindFavoritesData()
         bindTrendingData()
         bindErrorHandling()
         setupListeners()
+        keepDataUpdated()
     }
 
-    private fun bindFavoritesData() = binding.apply {
-        combine(viewModel.favorites,
-            viewModel.store.stateFlow.map { it.chartData }, ::Pair)
-            .distinctUntilChanged().asLiveData().observe(viewLifecycleOwner) { pair ->
-            val stocks = pair.first
-            val chartData = pair.second
-            Log.i(TAG, "favorites list MF: ${stocks.map { Triple(it.id, it.symbol, it.lastUpdatedTime) }} | $chartData |$stocks ")
-            if (stocks.isEmpty()) return@observe
-            if (stocks.minOf { it.lastUpdatedTime } + TEN_MINUTES < System.currentTimeMillis())
-                viewModel.updateFavoritesQuotes(stocks)
-            if (!chartData.keys.containsAll(stocks.map {
-                    it.symbol + TIME_SPANS[0].first + TIME_SPANS[0].second }))
-                viewModel.updateFavoritesChartData(stocks)
-
-            val favoritesAdapter = FavoritesAdapter(this@MainFragment)
-            recyclerViewFavorites.adapter = favoritesAdapter
-            recyclerViewFavorites.isVisible = true
-            favoritesAdapter.submitList(stocks.map {
-                FavoritesRVItem(
-                    stock = it,
-                    intraDayInfo = chartData[it.symbol + TIME_SPANS[0].first + TIME_SPANS[0].second]
-                        ?: emptyList()
-                )
-            })
+    private fun observeNetworkConnectivity() {
+        networkConnectionObserver.connection.observe(viewLifecycleOwner) {
+            if (it == NetworkStatus.Available || it == NetworkStatus.BackOnline)
+                viewModel.initSetup()
         }
-        viewModel.state.map { Pair(it.favoritesNr, it.favoritesLoading) }.observe(viewLifecycleOwner) {
-            addStocksTv.isVisible = it.first == 0
-            addStocksBtn.isVisible = it.first == 0
+    }
 
-            favoritesShimmerLayout.root.isVisible = it.first != 0 && it.second
-            recyclerViewFavorites.isVisible = !it.second
-            if (it.second)
-                favoritesShimmerLayout.root.startShimmer()
-            else favoritesShimmerLayout.root.stopShimmer()
+    private fun keepDataUpdated() {
+        refreshData?.cancel()
+        refreshData = lifecycleScope.launchWhenStarted {
+                while (true) {
+                    viewModel.updateFavoritesQuotes()
+                    viewModel.updateFavoritesChartData()
+                    viewModel.updatePortfolio()
+                    delay(TEN_MINUTES.toLong())
+                }
+            }
+    }
+
+    private fun bindFavoritesData() {
+        viewModel.favoritesState.distinctUntilChanged().observe(viewLifecycleOwner) {
+            viewModel.updateFavoritesQuotes()
+            viewModel.updateFavoritesChartData()
+            setupVisibilityAndLoadingStates(it)
+            setupFavoritesRecyclerView(it)
         }
+    }
+
+    private fun setupFavoritesRecyclerView(state: MainViewModel.FavoritesUiState) {
+        if (state.quotes.isNullOrEmpty() || state.chartData.isNullOrEmpty())
+            return
+        val favoritesAdapter = FavoritesAdapter(this@MainFragment)
+        binding.recyclerViewFavorites.adapter = favoritesAdapter
+        favoritesAdapter.submitList(state.quotes.map { quote ->
+            FavoritesUiModel(
+                quote = quote,
+                chartData = state.chartData[quote.symbol + TIME_SPANS[0].first + TIME_SPANS[0].second]
+                    ?: emptyList()
+            )
+        })
+    }
+
+    private fun setupVisibilityAndLoadingStates(state: MainViewModel.FavoritesUiState) = binding.apply {
+        addStocksTv.isVisible = !state.hasFavorites
+        addStocksBtn.isVisible = !state.hasFavorites
+
+        favoritesShimmerLayout.root.isVisible = state.hasFavorites && (state.quotes.isNullOrEmpty() || state.chartData.isNullOrEmpty())
+        recyclerViewFavorites.isVisible = !state.quotes.isNullOrEmpty() && !state.chartData.isNullOrEmpty()
+        if (!state.isFetchingQuotes && !state.isFetchingChartData)
+            favoritesShimmerLayout.root.stopShimmer()
+        else favoritesShimmerLayout.root.startShimmer()
     }
 
     private fun bindTrendingData() = binding.apply {
         viewModel.trendingStocks.observe(viewLifecycleOwner) { list ->
-                recyclerViewTrending.withModels {
-                    list.forEach {
-                        trendingItem { setupEachTrendingItem(it) }
-                    }
+            recyclerViewTrending.withModels {
+                list.forEach {
+                    trendingItem { setupEachTrendingItem(it) }
                 }
+            }
             trendingShimmerLayout.root.isVisible = list.isEmpty()
             recyclerViewTrending.isVisible = list.isNotEmpty()
             if (list.isEmpty())
                 trendingShimmerLayout.root.startShimmer()
             else trendingShimmerLayout.root.stopShimmer()
-            }
+        }
     }
 
     private fun TrendingItemBindingModelBuilder.setupEachTrendingItem(stock: Stock) {
@@ -108,11 +131,11 @@ class MainFragment : Fragment(R.layout.main_fragment), FavoritesAdapter.OnItemCl
         }
     }
 
-    private fun bindPortfolioData() = lifecycleScope.launch {
-        viewModel.store.stateFlow.map { it.portfolio }.distinctUntilChanged()
-            .filterNotNull().asLiveData().observe(viewLifecycleOwner) {
-            Log.i(TAG, "getPortfolioData: $it , ${it.stocksToShareAmount}")
+    private fun bindPortfolioData()  {
+        viewModel.portfolio.distinctUntilChanged().observe(viewLifecycleOwner) {
+            Log.i(TAG, "bindPortfolioData: ${it.stocksToShareAmount}")
             binding.portfolio = it
+            viewModel.updatePortfolio()
         }
     }
 
@@ -131,9 +154,8 @@ class MainFragment : Fragment(R.layout.main_fragment), FavoritesAdapter.OnItemCl
         }
     }
 
-    override fun onFavoriteItemClick(stock: Stock) {
-        Log.i(TAG, "onFavoriteItemClick: $stock")
-        val action = MainFragmentDirections.actionMainFragmentToInfoFragment(stock.name, stock.symbol)
+    override fun onFavoriteItemClick(quote: Quote) {
+        val action = MainFragmentDirections.actionMainFragmentToInfoFragment(quote.name, quote.symbol)
         findNavController().navigate(action)
     }
 

@@ -1,7 +1,6 @@
 package com.konovus.apitesting.ui
 
 import android.os.Bundle
-import android.util.Log
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.isVisible
@@ -13,7 +12,6 @@ import com.google.android.material.bottomnavigation.BottomNavigationView
 import com.konovus.apitesting.R
 import com.konovus.apitesting.data.redux.AppState
 import com.konovus.apitesting.data.redux.Store
-import com.konovus.apitesting.util.Constants.TAG
 import com.konovus.apitesting.util.NetworkConnectionObserver
 import com.konovus.apitesting.util.NetworkStatus
 import dagger.hilt.android.AndroidEntryPoint
@@ -55,7 +53,6 @@ class MainActivity : AppCompatActivity() {
         val networkStatusTV = findViewById<TextView>(R.id.no_internet_tv)
 
         networkObserver.connection.observe(this) { networkStatus ->
-            Log.i(TAG, "setupNetworkObserver: $networkStatus")
             when(networkStatus) {
                 NetworkStatus.BackOnline -> {
                     lifecycleScope.launch{

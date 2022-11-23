@@ -4,6 +4,7 @@ import android.os.Parcelable
 import androidx.room.Entity
 import androidx.room.Index
 import androidx.room.PrimaryKey
+import com.konovus.apitesting.data.local.models.Quote
 import kotlinx.parcelize.Parcelize
 
 @Parcelize
@@ -53,5 +54,12 @@ data class Stock(
                 "exchange=$exchange, industry=$industry, sector=$sector, employees=$employees, " +
                 "marketCap=$marketCap, description=${description.substring(0,5)}...)"
     }
+
+    fun toQuote() = Quote(
+        name = name,
+        symbol = symbol,
+        price =  price.toString(),
+        lastTimeUpdated = System.currentTimeMillis()
+    )
 
 }

@@ -2,7 +2,6 @@ package com.konovus.apitesting.ui.infoScreen
 
 import android.R.attr.fillColor
 import android.os.Bundle
-import android.util.Log
 import android.view.View
 import android.widget.Toast
 import androidx.core.content.ContextCompat
@@ -31,14 +30,13 @@ import com.konovus.apitesting.data.local.entities.Transaction
 import com.konovus.apitesting.databinding.BottomSheetBinding
 import com.konovus.apitesting.databinding.InfoFragmentBinding
 import com.konovus.apitesting.transactionsItem
-import com.konovus.apitesting.util.Constants.TAG
 import com.konovus.apitesting.util.MpMarker
 import com.konovus.apitesting.util.OnTabSelected
 import com.konovus.apitesting.util.toNDecimals
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.filterNotNull
 
 
 @AndroidEntryPoint
@@ -54,17 +52,16 @@ class InfoFragment : Fragment(R.layout.info_fragment) {
         super.onViewCreated(view, savedInstanceState)
         _binding = InfoFragmentBinding.bind(view)
 
-        bindState()
-        setupListeners()
+        bindUiStateToLayout()
         bindTransactionsData()
+        setupListeners()
         bindErrorHandling()
 
         requireActivity().findViewById<BottomNavigationView>(R.id.bottom_navigation).isVisible = false
     }
 
-    private fun bindState() {
+    private fun bindUiStateToLayout() {
         viewModel.state.distinctUntilChanged().observe(viewLifecycleOwner) { state ->
-            Log.i(TAG, "bindState: $state")
             binding.state = state
             state.stock?.let { stock = it }
             setupChart(state.chartData)
@@ -72,14 +69,15 @@ class InfoFragment : Fragment(R.layout.info_fragment) {
     }
 
     private fun bindTransactionsData() = binding.apply {
-        combine(viewModel.store.stateFlow.map { it.portfolio?.transactions },
-            viewModel.state.map { it.tabNr }.asFlow()) { transactions, tabNr ->
-            Pair(transactions, tabNr)
-        }.distinctUntilChanged().asLiveData().observe(viewLifecycleOwner) { pair ->
-            if (pair.first.isNullOrEmpty() || pair.second != 2) return@observe
+        combine(viewModel.state.map { it.portfolio?.transactions }.asFlow().filterNotNull(),
+            viewModel.state.map { it.tabNr }.asFlow(), ::Pair).distinctUntilChanged()
+            .asLiveData().observe(viewLifecycleOwner) { pair ->
+            val transactions = pair.first.filter { it.symbol == args.symbol }
+            noTransactions = transactions.isEmpty() == true
+            if (transactions.isEmpty() || pair.second != 2) return@observe
 
             transactionsTab.epoxyRecyclerView.withModels {
-                pair.first!!.filter { it.symbol == args.symbol }.sortedByDescending { it.dateTime }
+                transactions.sortedByDescending { it.dateTime }
                     .forEach { transaction ->
                     transactionsItem {
                         id(transaction.dateTime)
@@ -92,7 +90,7 @@ class InfoFragment : Fragment(R.layout.info_fragment) {
     }
 
     private fun showBottomSheet() {
-        if (viewModel.store.stateFlow.value.portfolio == null) return
+        if (viewModel.state.value?.portfolio == null) return
 
         val bottomSheet = BottomSheetDialog(requireContext())
         val bottomSheetBinding = BottomSheetBinding.inflate(layoutInflater)
@@ -147,7 +145,7 @@ class InfoFragment : Fragment(R.layout.info_fragment) {
         if (text.isNullOrEmpty()) return
 
         if (orderType == OrderType.Sell) {
-            val portfolio = viewModel.store.stateFlow.value.portfolio!!
+            val portfolio = viewModel.state.value?.portfolio!!
             if (portfolio.stocksToShareAmount.isEmpty()) {
                 sumInputWrap.error = "No shares to sell"
                 return
@@ -214,8 +212,7 @@ class InfoFragment : Fragment(R.layout.info_fragment) {
             }
         }
         tabLayout.tabLayout.OnTabSelected {
-            noTransactions.isVisible = false
-            viewModel.onEvent(InfoScreenEvent.OnTabSelected(tabNr = it))
+            viewModel.onEvent(InfoScreenEvent.OnChangeTab(it))
         }
     }
 

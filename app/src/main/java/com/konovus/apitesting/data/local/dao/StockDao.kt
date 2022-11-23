@@ -1,6 +1,5 @@
 package com.konovus.apitesting.data.local.dao
 
-import androidx.lifecycle.LiveData
 import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy.REPLACE
@@ -29,7 +28,7 @@ interface StockDao {
     fun getAllFavoriteStocksFlow(): Flow<List<Stock>>
 
     @Query("Select * from stocks_table WHERE isFavorite = 1")
-    fun getAllFavoriteStocks(): LiveData<List<Stock>>
+    suspend fun getFavoriteStocks(): List<Stock>
 
     @Query("select * from stocks_table where :symbol = symbol")
     suspend fun getStockBySymbol(symbol: String): Stock?

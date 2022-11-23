@@ -6,8 +6,8 @@
 
     <data>
         <variable
-            name="stock"
-            type="com.konovus.apitesting.data.local.entities.Stock" />
+            name="quote"
+            type="com.konovus.apitesting.data.local.models.Quote" />
         <variable
             name="amountOwned"
             type="String" />
@@ -49,7 +49,7 @@
                 android:textColor="@color/white"
                 android:ellipsize="end"
                 android:maxLines="1"
-                android:text="@{stock.name}"
+                android:text="@{quote.name}"
                 app:layout_constraintTop_toTopOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintEnd_toStartOf="@id/amount_owned_tv" />
@@ -64,7 +64,7 @@
                 android:paddingVertical="8dp"
                 android:textColor="@color/gray"
                 android:textAlignment="viewStart"
-                android:text="@{stock.symbol}"
+                android:text="@{quote.symbol}"
                 tools:text="asads"
                 app:layout_constraintTop_toBottomOf="@id/name_tv"
                 app:layout_constraintStart_toStartOf="parent"

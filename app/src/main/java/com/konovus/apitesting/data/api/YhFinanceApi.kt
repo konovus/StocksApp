@@ -16,7 +16,7 @@ interface YhFinanceApi {
     @Headers("X-RapidAPI-Key: $API_KEY_YH_FINANCE",
             "X-RapidAPI-Host: yh-finance.p.rapidapi.com")
     @GET("market/v2/get-quotes")
-    suspend fun getMultipleQuotes(
+    suspend fun fetchMultipleQuotes(
         @Query("symbols") symbols: String,
         @Query("symbols") region: String = "US",
     ): Response<MultipleQuotesResponse>
@@ -31,13 +31,13 @@ interface YhFinanceApi {
     @Headers("X-RapidAPI-Key: $API_KEY_YH_FINANCE",
             "X-RapidAPI-Host: yh-finance.p.rapidapi.com")
     @GET("market/get-trending-tickers")
-    suspend fun getTrendingStocks(): Response<TrendingStocksResponse>
+    suspend fun fetchTrendingStocks(): Response<TrendingStocksResponse>
 
 
     @Headers("X-RapidAPI-Key: $API_KEY_YH_FINANCE",
             "X-RapidAPI-Host: yh-finance.p.rapidapi.com")
     @GET("market/get-spark")
-    suspend fun getMultipleChartsData(
+    suspend fun fetchMultipleChartsData(
         @Query("symbols") symbols: String,
         @Query("interval") interval: String = "60m",
         @Query("range") range: String = "1d"

@@ -17,13 +17,13 @@ import com.github.mikephil.charting.data.LineData
 import com.github.mikephil.charting.data.LineDataSet
 import com.konovus.apitesting.R
 import com.konovus.apitesting.data.local.entities.ChartData
-import com.konovus.apitesting.data.local.entities.FavoritesRVItem
-import com.konovus.apitesting.data.local.entities.Stock
+import com.konovus.apitesting.data.local.models.FavoritesUiModel
+import com.konovus.apitesting.data.local.models.Quote
 import com.konovus.apitesting.databinding.FavoritesStockItemBinding
 import com.konovus.apitesting.util.toNDecimals
 
 class FavoritesAdapter(private val listener: OnItemClickListener) :
-    ListAdapter<FavoritesRVItem, FavoritesAdapter.MainViewHolder>(Differ) {
+    ListAdapter<FavoritesUiModel, FavoritesAdapter.MainViewHolder>(Differ) {
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): MainViewHolder {
         val binding =
@@ -47,26 +47,26 @@ class FavoritesAdapter(private val listener: OnItemClickListener) :
                 val pos = bindingAdapterPosition
                 if (pos != RecyclerView.NO_POSITION) {
                     getItem(pos)?.let {
-                        listener.onFavoriteItemClick(it.stock)
+                        listener.onFavoriteItemClick(it.quote)
                     }
                 }
             }
         }
 
-        fun bind(item: FavoritesRVItem) {
+        fun bind(item: FavoritesUiModel) {
 
             binding.apply {
-                name.text = item.stock.name
-                symbol.text = item.stock.symbol
-                price.text = item.stock.price.toNDecimals(2).toString()
+                name.text = item.quote.name
+                symbol.text = item.quote.symbol
+                price.text = item.quote.price.toNDecimals(2).toString()
 
-                setupChart(item.intraDayInfo, chart, itemView.context)
+                setupChart(item.chartData, chart, itemView.context)
 
             }
         }
     }
 
-    override fun submitList(list: List<FavoritesRVItem>?) {
+    override fun submitList(list: List<FavoritesUiModel>?) {
         super.submitList(list?.let { ArrayList(it) })
     }
 
@@ -119,15 +119,15 @@ class FavoritesAdapter(private val listener: OnItemClickListener) :
 
 
     interface OnItemClickListener {
-        fun onFavoriteItemClick(stock: Stock)
+        fun onFavoriteItemClick(quote: Quote)
     }
 
     companion object {
-        private val Differ = object : DiffUtil.ItemCallback<FavoritesRVItem>() {
-            override fun areItemsTheSame(oldItem: FavoritesRVItem, newItem: FavoritesRVItem) =
-                oldItem.stock.symbol == newItem.stock.symbol
+        private val Differ = object : DiffUtil.ItemCallback<FavoritesUiModel>() {
+            override fun areItemsTheSame(oldItem: FavoritesUiModel, newItem: FavoritesUiModel) =
+                oldItem.quote.symbol == newItem.quote.symbol
 
-            override fun areContentsTheSame(oldItem: FavoritesRVItem, newItem: FavoritesRVItem) =
+            override fun areContentsTheSame(oldItem: FavoritesUiModel, newItem: FavoritesUiModel) =
                 oldItem == newItem
         }
     }

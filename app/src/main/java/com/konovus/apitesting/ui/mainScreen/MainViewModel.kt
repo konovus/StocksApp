@@ -1,26 +1,24 @@
 package com.konovus.apitesting.ui.mainScreen
 
 import android.app.Application
-import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.asLiveData
 import androidx.lifecycle.viewModelScope
-import com.konovus.apitesting.R
-import com.konovus.apitesting.data.api.YhFinanceApi
 import com.konovus.apitesting.data.local.entities.ChartData
+import com.konovus.apitesting.data.local.entities.OrderType
+import com.konovus.apitesting.data.local.entities.Portfolio
 import com.konovus.apitesting.data.local.entities.Stock
+import com.konovus.apitesting.data.local.models.Quote
 import com.konovus.apitesting.data.redux.AppState
 import com.konovus.apitesting.data.redux.Store
 import com.konovus.apitesting.data.repository.MainRepository
-import com.konovus.apitesting.util.Constants.TAG
 import com.konovus.apitesting.util.Constants.TEN_MINUTES
 import com.konovus.apitesting.util.Constants.TIME_SPANS
-import com.konovus.apitesting.util.NetworkStatus
 import com.konovus.apitesting.util.Resource
+import com.konovus.apitesting.util.toNDecimals
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -28,18 +26,15 @@ import javax.inject.Inject
 @HiltViewModel
 class MainViewModel @Inject constructor(
     private val repository: MainRepository,
-    private val yhFinanceApi: YhFinanceApi,
     val store: Store<AppState>,
     app: Application
 ) : AndroidViewModel(app) {
 
-    private val stateFlow = MutableStateFlow(MainScreenStates())
-    val state: LiveData<MainScreenStates> = stateFlow.asLiveData()
+    private val _portfolio = MutableStateFlow(Portfolio())
+    val portfolio: LiveData<Portfolio> = _portfolio.asLiveData()
 
-    val favorites = repository.getFavoritesFlow().map { list ->
-        store.update { it.copy(favorites = list.map { it.symbol }) }
-        list.sortedByDescending { it.id }
-    }
+    private val favoritesStateFlow = MutableStateFlow(FavoritesUiState())
+    val favoritesState: LiveData<FavoritesUiState> = favoritesStateFlow.asLiveData()
 
     private val _trendingStocks = MutableStateFlow(emptyList<Stock>())
     val trendingStocks: LiveData<List<Stock>> = _trendingStocks.asLiveData()
@@ -47,18 +42,12 @@ class MainViewModel @Inject constructor(
     private val eventChannel = Channel<String>()
     val event = eventChannel.receiveAsFlow()
 
-    init {
-        observeConnectivity()
-        if (store.stateFlow.value.networkStatus == NetworkStatus.Available)
-            initSetup()
-    }
 
-    private fun initSetup() {
-        getDefaultPortfolio()
-//        updatePortfolioStocksPrices()
+    fun initSetup() {
+        createDefaultPortfolio()
+        collectPortfolio()
+        collectFavorites()
         getTrendingStocks()
-        getFavoritesNr()
-//        getFavoritesStocksFromDb()
     }
 
     private fun sendEvent(message: String) = viewModelScope.launch {
@@ -66,120 +55,90 @@ class MainViewModel @Inject constructor(
     }
 
     private fun updatePortfolioStocksPrices() = viewModelScope.launch {
-        while (true) {
-            if (store.stateFlow.value.portfolio != null &&
-                store.stateFlow.value.portfolio!!.lastUpdatedTime + TEN_MINUTES < System.currentTimeMillis())
-                repository.updatePortfolioStocksPrices(store.stateFlow.value.portfolio!!)
-            delay(TEN_MINUTES.toLong())
+        val symbols = _portfolio.value.stocksToShareAmount.keys.joinToString(",")
+        val result = repository.fetchUpdatedQuotes(symbols)
+        processNetworkResult(result) { list ->
+            val responseList = list.quoteResponse.result.filterNot {
+                it.toString().contains("null")
+            }.map { it.toQuote() }
+            responseList.forEach { repository.updatePortfolioStocksCache(it) }
         }
     }
 
-    private fun getFavoritesNr() = viewModelScope.launch {
-        val favoritesNr = repository.getFavoritesNr()
-        stateFlow.value = stateFlow.value.copy(
-            favoritesNr = favoritesNr,
-            favoritesLoading = favoritesNr > 0
+    fun updatePortfolio() = viewModelScope.launch {
+        val portfolio = _portfolio.value
+        if (portfolio.stocksToShareAmount.isEmpty() ||
+            (portfolio.lastUpdatedTime + TEN_MINUTES > System.currentTimeMillis() && repository.portfolioQuotesCache.isNotEmpty()))
+            return@launch
+        updatePortfolioStocksPrices()
+        val updatedBalance = repository.portfolioQuotesCache.sumOf {
+            it.price.toDouble() * portfolio.stocksToShareAmount[it.symbol]!!
+        }
+        if (updatedBalance == 0.0) return@launch
+        val initialBalance = portfolio.transactions.filter { it.orderType == OrderType.Buy }.sumOf { it.amount }
+            .minus(portfolio.transactions.filter { it.orderType == OrderType.Sell }.sumOf { it.amount })
+        val change = updatedBalance - initialBalance
+        val updatedPortfolio = portfolio.copy(
+            totalBalance = updatedBalance.toNDecimals(2),
+            change = change.toNDecimals(2),
+            changePercent = (change / initialBalance * 100).toNDecimals(2),
+            lastUpdatedTime = System.currentTimeMillis()
         )
+        repository.updatePortfolio(portfolio = updatedPortfolio)
     }
 
-    private fun observeConnectivity() = viewModelScope.launch {
-        store.stateFlow.map { it.networkStatus }.distinctUntilChanged().collectLatest {
-            if (it == NetworkStatus.BackOnline
-                && store.stateFlow.value.bottomNavSelectedId == R.id.mainFragment) {
-                initSetup()
-            }
+    private fun collectFavorites() = viewModelScope.launch {
+        val favoritesNr = repository.getFavoritesNr()
+        favoritesStateFlow.update { it.copy(hasFavorites = favoritesNr > 0) }
+        repository.getFavoritesFlow().filterNotNull().collectLatest { list ->
+            favoritesStateFlow.update { it.copy(
+                quotes = list.sortedByDescending { it.id }.map { stock -> stock.toQuote()},
+                chartData = repository.chartDataCache,
+                hasFavorites = list.isNotEmpty()) }
         }
     }
 
-    fun updateFavoritesQuotes(localFavs: List<Stock>) = viewModelScope.launch {
-        if (localFavs.minOf { it.lastUpdatedTime } + TEN_MINUTES < System.currentTimeMillis()
-            && !stateFlow.value.isUpdatingQuotes) {
-            stateFlow.value = stateFlow.value.copy(favoritesLoading = true, isUpdatingQuotes = true)
-            val responseMultipleQuotes = repository.makeNetworkCall(
-                "quotes ${localFavs.joinToString(",") { it.symbol }}") {
-                yhFinanceApi.getMultipleQuotes(localFavs.joinToString(",") { it.symbol })
-            }
-            if (responseMultipleQuotes is Resource.Success) {
-                val updatedStocks = responseMultipleQuotes.data!!.quoteResponse.result.map { result ->
-                    result.toStock().copy(isFavorite = true, id = localFavs.find { it.symbol == result.symbol }!!.id)
-                }
-                Log.i(TAG, "updateFavoritesQuotes: ${updatedStocks.map { Pair(it.symbol, it.lastUpdatedTime) }}")
-                repository.updateStocks(stocks = updatedStocks)
-            } else {
-                sendEvent(message = responseMultipleQuotes.message.orEmpty())
-            }
-            stateFlow.value = stateFlow.value.copy(favoritesLoading = false, isUpdatingQuotes = false)
+    fun updateFavoritesQuotes() = viewModelScope.launch {
+        if (favoritesStateFlow.value.isFetchingQuotes || favoritesStateFlow.value.quotes.isNullOrEmpty()
+            || favoritesStateFlow.value.quotes!!.minOf { it.lastTimeUpdated } + TEN_MINUTES > System.currentTimeMillis()) return@launch
+        favoritesStateFlow.update { it.copy(isFetchingQuotes = true) }
+        val responseMultipleQuotes = repository
+            .fetchUpdatedQuotes(repository.favoritesCache.joinToString(",") { it.symbol })
+        processNetworkResult(responseMultipleQuotes) { result ->
+            val quotes = result.quoteResponse.result.map { data -> data.toQuote() }
+            favoritesStateFlow.update { it.copy(quotes = quotes, isFetchingQuotes = false) }
         }
     }
 
-    fun updateFavoritesChartData(localFavs: List<Stock>) = viewModelScope.launch {
-        if (!store.stateFlow.value.chartData.map { it.key }.containsAll(localFavs.map {
-                it.symbol + TIME_SPANS[0].first + TIME_SPANS[0].second })
-            && !stateFlow.value.isUpdatingChartsData) {
-            stateFlow.value = stateFlow.value.copy(favoritesLoading = true, isUpdatingChartsData = true)
-            val responseChartData = repository.makeNetworkCall(
-                "chartData ${localFavs.joinToString(",") { it.symbol }}"
-            ) {
-                yhFinanceApi.getMultipleChartsData(localFavs.joinToString(",") { it.symbol })
+    fun updateFavoritesChartData() = viewModelScope.launch {
+        if (repository.favoritesCache.isEmpty() || repository.chartDataCache.isNotEmpty()
+            || favoritesStateFlow.value.isFetchingChartData) return@launch
+        favoritesStateFlow.update { it.copy(isFetchingChartData = true) }
+        val responseChartData = repository
+            .fetchMultipleChartsData(repository.favoritesCache.joinToString(",") { it.symbol })
+        processNetworkResult(responseChartData) { result ->
+            result.values.forEach {
+                val key = it.symbol + TIME_SPANS[0].first + TIME_SPANS[0].second
+                val value = it.close.mapIndexed { index, close -> ChartData(
+                    close = close,
+                    timestamp = it.timestamp[index].toString()
+                ) }
+                repository.updateChartDataCache(key = key, value = value)
             }
-            if (responseChartData is Resource.Success) {
-                store.update { appState ->
-                    val map = appState.chartData.toMutableMap()
-                    responseChartData.data!!.values.forEach {
-                        map[it.symbol + TIME_SPANS[0].first + TIME_SPANS[0].second] =
-                            it.close.mapIndexed { index, close ->  ChartData(
-                                close = close,
-                                timestamp = it.timestamp[index].toString()
-                            ) }
-                    }
-                    appState.copy(chartData = map)
-                }
-            } else {
-                sendEvent(message = responseChartData.message.orEmpty())
-            }
-            stateFlow.value = stateFlow.value.copy(favoritesLoading = false, isUpdatingChartsData = false)
         }
-    }
-
-    private fun getFavoritesStocksFromDb() = viewModelScope.launch {
-        repository.getFavoritesFlow().collectLatest { favorites ->
-            Log.i(TAG, "Main VM getFavoritesStocksFromDb: ${favorites.map { it.symbol }}")
-            stateFlow.value = stateFlow.value.copy(
-                favoritesList = favorites.sortedByDescending { it.id },
-                favoritesNr = favorites.size
-            )
-            store.update { it.copy(favorites = favorites.map { it.symbol }) }
-        }
+        favoritesStateFlow.update { it.copy(chartData = repository.chartDataCache, isFetchingChartData = false) }
     }
 
     private fun getTrendingStocks() = viewModelScope.launch {
-        val response = repository.makeNetworkCall("trending") { yhFinanceApi.getTrendingStocks() }
-        if (response is Resource.Success && response.data != null) {
-            val stocks = response.data.finance.result.first().quotes.map { it.toStock() }
+        if (_trendingStocks.value.isNotEmpty()) return@launch
+        val response = repository.fetchTrendingStocks()
+        processNetworkResult(response) { result ->
+            val stocks = result.finance.result.first().quotes.map { it.toStock() }
                 .filter { it.quoteType == "EQUITY" }
-            if (stocks.isEmpty()) sendEvent("No trending stocks.")
+            if (stocks.isEmpty()) sendEvent("No trending stocks found.")
             _trendingStocks.value = stocks
-        } else if (response is Resource.Error)
-            sendEvent(response.message.toString().ifEmpty { "Unexpected error occurred." })
+        }
     }
-
-//    private fun getTrendingStocks() = viewModelScope.launch {
-//        stateFlow.value = stateFlow.value.copy(trendingLoading = true)
-//        val result = repository.makeNetworkCall("trending") {
-//            yhFinanceApi.getTrendingStocks()
-//        }
-//        processNetworkResult(result) { data ->
-//            val stocks = data.finance.result.first().quotes.map { it.toStock() }
-//                .filter { it.quoteType == "EQUITY" }
-//            if (stocks.isEmpty()) return@processNetworkResult
-//            store.update { appState ->
-//                appState.copy(
-//                    trendingStocks = stocks
-//                )
-//            }
-//        }
-//        stateFlow.value = stateFlow.value.copy(trendingLoading = false)
-//    }
 
     private fun <T> processNetworkResult(
         result: Resource<T>,
@@ -190,7 +149,7 @@ class MainViewModel @Inject constructor(
                 is Resource.Success -> {
                     processBlock(result.data!!)
                 }
-                is Resource.Loading -> stateFlow.value = stateFlow.value.copy(isLoading = true)
+                is Resource.Loading -> {}
                 is Resource.Error -> {
                     sendEvent(message = result.message.orEmpty())
                 }
@@ -198,26 +157,24 @@ class MainViewModel @Inject constructor(
         }
     }
 
-    private fun getDefaultPortfolio() = viewModelScope.launch {
-        repository.getPortfoliosFlow().collectLatest { list ->
-            Log.i(TAG, "getDefaultPortfolio: $list")
+    private fun createDefaultPortfolio() = viewModelScope.launch {
+        if (repository.getPortfolio() == null)
+            repository.insertPortfolio(Portfolio(name = "Default", id = 1))
+    }
+
+    private fun collectPortfolio() = viewModelScope.launch {
+        repository.getPortfoliosFlow().filterNotNull().collectLatest { list ->
             if (list.isEmpty()) return@collectLatest
-            store.update { it.copy(portfolio = list.first()) }
+            _portfolio.update { list.first() }
         }
     }
 
-    data class MainScreenStates(
-        val stockInfoData: MutableMap<String, List<ChartData>> = mutableMapOf(),
-        val trendingCompanies: List<Stock> = emptyList(),
-        val favoritesList: List<Stock> = emptyList(),
-        val favoritesNr: Int? = null,
-        val isUpdatingChartsData: Boolean = false,
-        val isUpdatingQuotes: Boolean = false,
-        val isUpdatingPortfolio: Boolean = false,
-        val isLoading: Boolean = false,
-        val trendingLoading: Boolean = false,
-        val favoritesLoading: Boolean = false,
-        val error: String? = null,
+    data class FavoritesUiState(
+        val quotes: List<Quote>? = null,
+        val chartData: Map<String, List<ChartData>>? = null,
+        val isFetchingQuotes: Boolean = false,
+        val isFetchingChartData: Boolean = false,
+        val hasFavorites: Boolean = false
     )
 
     sealed class Event{
