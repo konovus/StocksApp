@@ -39,19 +39,7 @@ class FavoritesAdapter(private val listener: OnItemClickListener) :
 
     inner class MainViewHolder(
         private val binding: FavoritesStockItemBinding
-    ) :
-        RecyclerView.ViewHolder(binding.root) {
-
-        init {
-            itemView.setOnClickListener {
-                val pos = bindingAdapterPosition
-                if (pos != RecyclerView.NO_POSITION) {
-                    getItem(pos)?.let {
-                        listener.onFavoriteItemClick(it.quote)
-                    }
-                }
-            }
-        }
+    ) : RecyclerView.ViewHolder(binding.root) {
 
         fun bind(item: FavoritesUiModel) {
 
@@ -62,12 +50,9 @@ class FavoritesAdapter(private val listener: OnItemClickListener) :
 
                 setupChart(item.chartData, chart, itemView.context)
 
+                itemView.setOnClickListener { listener.onFavoriteItemClick(item.quote) }
             }
         }
-    }
-
-    override fun submitList(list: List<FavoritesUiModel>?) {
-        super.submitList(list?.let { ArrayList(it) })
     }
 
     private fun setupChart(chartData: List<ChartData>, chart: LineChart, context: Context) {

@@ -10,8 +10,6 @@ import androidx.navigation.fragment.NavHostFragment
 import androidx.navigation.ui.NavigationUI
 import com.google.android.material.bottomnavigation.BottomNavigationView
 import com.konovus.apitesting.R
-import com.konovus.apitesting.data.redux.AppState
-import com.konovus.apitesting.data.redux.Store
 import com.konovus.apitesting.util.NetworkConnectionObserver
 import com.konovus.apitesting.util.NetworkStatus
 import dagger.hilt.android.AndroidEntryPoint
@@ -23,8 +21,6 @@ import javax.inject.Inject
 class MainActivity : AppCompatActivity() {
 
     private lateinit var navController: NavController
-    @Inject
-    lateinit var store: Store<AppState>
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -67,9 +63,6 @@ class MainActivity : AppCompatActivity() {
                 }
                 NetworkStatus.Available -> {}
                 else -> throw NoSuchFieldException()
-            }
-            lifecycleScope.launch {
-                store.update { it.copy(networkStatus = networkStatus) }
             }
         }
     }

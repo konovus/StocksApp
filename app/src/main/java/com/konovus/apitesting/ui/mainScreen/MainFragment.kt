@@ -37,7 +37,6 @@ class MainFragment : Fragment(R.layout.main_fragment), FavoritesAdapter.OnItemCl
     private val binding get() = _binding!!
     private val viewModel: MainViewModel by viewModels()
     private var refreshData: Job? = null
-
     @Inject
     lateinit var networkConnectionObserver: NetworkConnectionObserver
 
@@ -46,7 +45,7 @@ class MainFragment : Fragment(R.layout.main_fragment), FavoritesAdapter.OnItemCl
         _binding = MainFragmentBinding.bind(view)
 
         observeNetworkConnectivity()
-        bindPortfolioData()
+        observeProfile()
         bindFavoritesData()
         bindTrendingData()
         bindErrorHandling()
@@ -54,10 +53,22 @@ class MainFragment : Fragment(R.layout.main_fragment), FavoritesAdapter.OnItemCl
         keepDataUpdated()
     }
 
+    private fun observeProfile() {
+        viewModel.profile.observe(viewLifecycleOwner) {
+            Log.i(TAG, "observeProfile: $it")
+            binding.profile = it
+            viewModel.updatePortfolio(it)
+        }
+    }
+
     private fun observeNetworkConnectivity() {
         networkConnectionObserver.connection.observe(viewLifecycleOwner) {
-            if (it == NetworkStatus.Available || it == NetworkStatus.BackOnline)
-                viewModel.initSetup()
+            if (it == NetworkStatus.Available || it == NetworkStatus.BackOnline) {
+                binding.profile?.let { viewModel.updatePortfolio(it) }
+                viewModel.updateFavoritesQuotes()
+                viewModel.updateFavoritesChartData()
+                viewModel.getTrendingStocks()
+            }
         }
     }
 
@@ -67,7 +78,7 @@ class MainFragment : Fragment(R.layout.main_fragment), FavoritesAdapter.OnItemCl
                 while (true) {
                     viewModel.updateFavoritesQuotes()
                     viewModel.updateFavoritesChartData()
-                    viewModel.updatePortfolio()
+                    binding.profile?.let { viewModel.updatePortfolio(it) }
                     delay(TEN_MINUTES.toLong())
                 }
             }
@@ -75,9 +86,10 @@ class MainFragment : Fragment(R.layout.main_fragment), FavoritesAdapter.OnItemCl
 
     private fun bindFavoritesData() {
         viewModel.favoritesState.distinctUntilChanged().observe(viewLifecycleOwner) {
+            Log.i(TAG, "bindFavoritesData: $it")
+            setupVisibilityAndLoadingStates(it)
             viewModel.updateFavoritesQuotes()
             viewModel.updateFavoritesChartData()
-            setupVisibilityAndLoadingStates(it)
             setupFavoritesRecyclerView(it)
         }
     }
@@ -87,7 +99,7 @@ class MainFragment : Fragment(R.layout.main_fragment), FavoritesAdapter.OnItemCl
             return
         val favoritesAdapter = FavoritesAdapter(this@MainFragment)
         binding.recyclerViewFavorites.adapter = favoritesAdapter
-        favoritesAdapter.submitList(state.quotes.map { quote ->
+        favoritesAdapter.submitList(state.quotes.reversed().map { quote ->
             FavoritesUiModel(
                 quote = quote,
                 chartData = state.chartData[quote.symbol + TIME_SPANS[0].first + TIME_SPANS[0].second]
@@ -111,7 +123,7 @@ class MainFragment : Fragment(R.layout.main_fragment), FavoritesAdapter.OnItemCl
         viewModel.trendingStocks.observe(viewLifecycleOwner) { list ->
             recyclerViewTrending.withModels {
                 list.forEach {
-                    trendingItem { setupEachTrendingItem(it) }
+                    trendingItem { setupTrendingItem(it) }
                 }
             }
             trendingShimmerLayout.root.isVisible = list.isEmpty()
@@ -122,7 +134,7 @@ class MainFragment : Fragment(R.layout.main_fragment), FavoritesAdapter.OnItemCl
         }
     }
 
-    private fun TrendingItemBindingModelBuilder.setupEachTrendingItem(stock: Stock) {
+    private fun TrendingItemBindingModelBuilder.setupTrendingItem(stock: Stock) {
         id(stock.symbol)
         stock(stock)
         onClick { _ ->
@@ -131,18 +143,8 @@ class MainFragment : Fragment(R.layout.main_fragment), FavoritesAdapter.OnItemCl
         }
     }
 
-    private fun bindPortfolioData()  {
-        viewModel.portfolio.distinctUntilChanged().observe(viewLifecycleOwner) {
-            Log.i(TAG, "bindPortfolioData: ${it.stocksToShareAmount}")
-            binding.portfolio = it
-            viewModel.updatePortfolio()
-        }
-    }
-
-
     private fun bindErrorHandling() {
         viewModel.event.asLiveData().observe(viewLifecycleOwner) { message ->
-            Log.i(TAG, "bindErrorHandling: $message")
                 Snackbar.make(binding.root, message, Snackbar.LENGTH_LONG).show()
             }
     }

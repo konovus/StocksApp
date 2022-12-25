@@ -2,11 +2,9 @@ package com.konovus.apitesting.data.remote.responses
 
 import android.os.Parcelable
 import kotlinx.parcelize.Parcelize
-import java.time.LocalDateTime
-import java.util.*
 
 @Parcelize
-data class ChartsData(
+data class ChartsDataResponse(
     val chartPreviousClose: Double,
     val close: List<Double>,
     val dataGranularity: Int,

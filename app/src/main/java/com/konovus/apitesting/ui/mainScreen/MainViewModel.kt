@@ -1,37 +1,43 @@
 package com.konovus.apitesting.ui.mainScreen
 
-import android.app.Application
-import androidx.lifecycle.AndroidViewModel
+import android.util.Log
 import androidx.lifecycle.LiveData
+import androidx.lifecycle.ViewModel
 import androidx.lifecycle.asLiveData
 import androidx.lifecycle.viewModelScope
-import com.konovus.apitesting.data.local.entities.ChartData
-import com.konovus.apitesting.data.local.entities.OrderType
-import com.konovus.apitesting.data.local.entities.Portfolio
-import com.konovus.apitesting.data.local.entities.Stock
+import com.konovus.apitesting.data.local.entities.*
 import com.konovus.apitesting.data.local.models.Quote
-import com.konovus.apitesting.data.redux.AppState
-import com.konovus.apitesting.data.redux.Store
-import com.konovus.apitesting.data.repository.MainRepository
+import com.konovus.apitesting.data.repository.IMainRepository
+import com.konovus.apitesting.util.Constants.TAG
 import com.konovus.apitesting.util.Constants.TEN_MINUTES
 import com.konovus.apitesting.util.Constants.TIME_SPANS
 import com.konovus.apitesting.util.Resource
 import com.konovus.apitesting.util.toNDecimals
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
+@OptIn(ExperimentalCoroutinesApi::class)
 @HiltViewModel
 class MainViewModel @Inject constructor(
-    private val repository: MainRepository,
-    val store: Store<AppState>,
-    app: Application
-) : AndroidViewModel(app) {
+    private val repository: IMainRepository,
+//    val store: Store<AppState>
+) : ViewModel() {
 
-    private val _portfolio = MutableStateFlow(Portfolio())
-    val portfolio: LiveData<Portfolio> = _portfolio.asLiveData()
+    val profile: LiveData<Profile> = repository.getProfileFlow().mapLatest { profile ->
+        updateFavoritesUiState(profile.favorites)
+        profile
+    }.asLiveData()
+
+//    val portfolio: LiveData<Portfolio> = repository.getPortfolioFlow().asLiveData()
+
+//    val favorites = repository.getFavoritesNr().flatMapLatest { count ->
+//            favoritesStateFlow.update { it.copy(hasFavorites = count > 0) }
+//            repository.getFavoritesFlow()
+//        }.distinctUntilChangedBy { list -> list.map { it.price } }.asLiveData()
 
     private val favoritesStateFlow = MutableStateFlow(FavoritesUiState())
     val favoritesState: LiveData<FavoritesUiState> = favoritesStateFlow.asLiveData()
@@ -42,22 +48,19 @@ class MainViewModel @Inject constructor(
     private val eventChannel = Channel<String>()
     val event = eventChannel.receiveAsFlow()
 
+    init {
+        createDefaultProfile()
 
-    fun initSetup() {
-        createDefaultPortfolio()
-        collectPortfolio()
-        collectFavorites()
-        getTrendingStocks()
     }
 
     private fun sendEvent(message: String) = viewModelScope.launch {
         eventChannel.send(message)
     }
 
-    private fun updatePortfolioStocksPrices() = viewModelScope.launch {
-        val symbols = _portfolio.value.stocksToShareAmount.keys.joinToString(",")
+    private fun updatePortfolioStocksPrices(symbols: String) = viewModelScope.launch {
         val result = repository.fetchUpdatedQuotes(symbols)
         processNetworkResult(result) { list ->
+            Log.i(TAG, "updatePortfolioStocksPrices: $list")
             val responseList = list.quoteResponse.result.filterNot {
                 it.toString().contains("null")
             }.map { it.toQuote() }
@@ -65,12 +68,12 @@ class MainViewModel @Inject constructor(
         }
     }
 
-    fun updatePortfolio() = viewModelScope.launch {
-        val portfolio = _portfolio.value
+    fun updatePortfolio(profile: Profile) = viewModelScope.launch {
+        val portfolio = profile.portfolio
         if (portfolio.stocksToShareAmount.isEmpty() ||
             (portfolio.lastUpdatedTime + TEN_MINUTES > System.currentTimeMillis() && repository.portfolioQuotesCache.isNotEmpty()))
             return@launch
-        updatePortfolioStocksPrices()
+        updatePortfolioStocksPrices(portfolio.stocksToShareAmount.keys.joinToString(","))
         val updatedBalance = repository.portfolioQuotesCache.sumOf {
             it.price.toDouble() * portfolio.stocksToShareAmount[it.symbol]!!
         }
@@ -84,26 +87,27 @@ class MainViewModel @Inject constructor(
             changePercent = (change / initialBalance * 100).toNDecimals(2),
             lastUpdatedTime = System.currentTimeMillis()
         )
-        repository.updatePortfolio(portfolio = updatedPortfolio)
+        repository.updateProfile(profile.copy(portfolio = updatedPortfolio))
     }
 
-    private fun collectFavorites() = viewModelScope.launch {
-        val favoritesNr = repository.getFavoritesNr()
-        favoritesStateFlow.update { it.copy(hasFavorites = favoritesNr > 0) }
-        repository.getFavoritesFlow().filterNotNull().collectLatest { list ->
-            favoritesStateFlow.update { it.copy(
-                quotes = list.sortedByDescending { it.id }.map { stock -> stock.toQuote()},
-                chartData = repository.chartDataCache,
-                hasFavorites = list.isNotEmpty()) }
-        }
+    private fun updateFavoritesUiState(symbols: List<String>) {
+        favoritesStateFlow.update { it.copy(
+            symbols = symbols,
+            quotes = repository.favoritesCache.filter { symbols.contains(it.symbol) },
+            chartData = repository.chartDataCache,
+            hasFavorites = symbols.isNotEmpty()
+        ) }
     }
 
     fun updateFavoritesQuotes() = viewModelScope.launch {
-        if (favoritesStateFlow.value.isFetchingQuotes || favoritesStateFlow.value.quotes.isNullOrEmpty()
-            || favoritesStateFlow.value.quotes!!.minOf { it.lastTimeUpdated } + TEN_MINUTES > System.currentTimeMillis()) return@launch
+        val quotesAreUpdated = if (favoritesStateFlow.value.quotes.isNullOrEmpty())
+            false
+        else favoritesStateFlow.value.quotes!!.minOf { it.lastTimeUpdated } + TEN_MINUTES > System.currentTimeMillis()
+
+        if (!favoritesStateFlow.value.hasFavorites || favoritesStateFlow.value.isFetchingQuotes || quotesAreUpdated) return@launch
         favoritesStateFlow.update { it.copy(isFetchingQuotes = true) }
         val responseMultipleQuotes = repository
-            .fetchUpdatedQuotes(repository.favoritesCache.joinToString(",") { it.symbol })
+            .fetchUpdatedQuotes(favoritesStateFlow.value.symbols.joinToString(","))
         processNetworkResult(responseMultipleQuotes) { result ->
             val quotes = result.quoteResponse.result.map { data -> data.toQuote() }
             favoritesStateFlow.update { it.copy(quotes = quotes, isFetchingQuotes = false) }
@@ -111,25 +115,27 @@ class MainViewModel @Inject constructor(
     }
 
     fun updateFavoritesChartData() = viewModelScope.launch {
-        if (repository.favoritesCache.isEmpty() || repository.chartDataCache.isNotEmpty()
+        if (!favoritesStateFlow.value.hasFavorites || repository.chartDataCache.isNotEmpty()
             || favoritesStateFlow.value.isFetchingChartData) return@launch
         favoritesStateFlow.update { it.copy(isFetchingChartData = true) }
         val responseChartData = repository
-            .fetchMultipleChartsData(repository.favoritesCache.joinToString(",") { it.symbol })
+            .fetchMultipleChartsData(favoritesStateFlow.value.symbols.joinToString(","))
         processNetworkResult(responseChartData) { result ->
+            val updatedChartData: MutableMap<String, List<ChartData>> = mutableMapOf()
             result.values.forEach {
                 val key = it.symbol + TIME_SPANS[0].first + TIME_SPANS[0].second
                 val value = it.close.mapIndexed { index, close -> ChartData(
                     close = close,
                     timestamp = it.timestamp[index].toString()
                 ) }
+                updatedChartData[key] = value
                 repository.updateChartDataCache(key = key, value = value)
             }
+            favoritesStateFlow.update { it.copy(chartData = repository.chartDataCache, isFetchingChartData = false) }
         }
-        favoritesStateFlow.update { it.copy(chartData = repository.chartDataCache, isFetchingChartData = false) }
     }
 
-    private fun getTrendingStocks() = viewModelScope.launch {
+    fun getTrendingStocks() = viewModelScope.launch {
         if (_trendingStocks.value.isNotEmpty()) return@launch
         val response = repository.fetchTrendingStocks()
         processNetworkResult(response) { result ->
@@ -157,19 +163,13 @@ class MainViewModel @Inject constructor(
         }
     }
 
-    private fun createDefaultPortfolio() = viewModelScope.launch {
-        if (repository.getPortfolio() == null)
-            repository.insertPortfolio(Portfolio(name = "Default", id = 1))
-    }
-
-    private fun collectPortfolio() = viewModelScope.launch {
-        repository.getPortfoliosFlow().filterNotNull().collectLatest { list ->
-            if (list.isEmpty()) return@collectLatest
-            _portfolio.update { list.first() }
-        }
+    private fun createDefaultProfile() = viewModelScope.launch {
+        if (repository.getProfile() == null)
+            repository.insertProfile(Profile())
     }
 
     data class FavoritesUiState(
+        val symbols: List<String> = emptyList(),
         val quotes: List<Quote>? = null,
         val chartData: Map<String, List<ChartData>>? = null,
         val isFetchingQuotes: Boolean = false,

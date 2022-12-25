@@ -1,16 +1,12 @@
 package com.konovus.apitesting.data.repository
 
-import android.util.Log
 import androidx.paging.PagingSource
 import com.konovus.apitesting.data.api.AlphaVantageApi
 import com.konovus.apitesting.data.csv.CSVParser
 import com.konovus.apitesting.data.local.db.CompaniesDatabase
 import com.konovus.apitesting.data.local.entities.ChartData
 import com.konovus.apitesting.data.local.entities.CompanyInfo
-import com.konovus.apitesting.util.Constants.TAG
 import com.konovus.apitesting.util.Resource
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.flow
 import retrofit2.HttpException
 import java.io.IOException
 import java.util.*
@@ -43,34 +39,14 @@ class AlphaVantageRepository @Inject constructor(
         }
     }
 
-    suspend fun getCompanyListings(
-        fetchFromRemote: Boolean,
-        query: String
-    ): Flow<Resource<PagingSource<Int, CompanyInfo>>> {
-        return flow {
-            Log.i(TAG, "getCompanyListings: fetch - $fetchFromRemote | query -$query, ${query.length}")
-            emit(Resource.Loading(true))
-            val localListings = companyDao.searchCompanyInfoPaged(query)
-            emit(Resource.Success( data = localListings))
-
-            val zeroRows = companyDao.getTotalRows() == 0
-            val shouldJustLoadFromCache = !zeroRows && !fetchFromRemote
-            if (shouldJustLoadFromCache) {
-                emit(Resource.Loading(false))
-                return@flow
-            }
-
-            when (val listings = getListingsFromApiToDb()) {
-                is Resource.Error -> {
-                    emit(Resource.Error(message = listings.message ?: "Error retrieving company listings"))
-                    emit((Resource.Loading(false)))
-                }
-                is Resource.Loading -> emit((Resource.Loading(true)))
-                is Resource.Success -> {
-                    emit(Resource.Success(companyDao.searchCompanyInfoPaged(query)))
-                    emit(Resource.Loading(false))
-                }
-            }
+    suspend fun getCompanyListings(query: String): Resource<PagingSource<Int, CompanyInfo>> {
+        return if (companyDao.getTotalRows() > 0)
+            Resource.Success(companyDao.searchCompanyInfoPaged(query))
+        else {
+            val result = getListingsFromApiToDb()
+            if (result is Resource.Success)
+                Resource.Success(companyDao.searchCompanyInfoPaged())
+            else Resource.Error(result.message.orEmpty(), null)
         }
     }
 

@@ -1,11 +1,11 @@
 package com.konovus.apitesting.data.api
 
 import com.google.gson.internal.LinkedTreeMap
-import com.konovus.apitesting.data.remote.responses.ChartsData
+import com.konovus.apitesting.BuildConfig.API_KEY_YH_FINANCE
+import com.konovus.apitesting.data.remote.responses.ChartsDataResponse
 import com.konovus.apitesting.data.remote.responses.MultipleQuotesResponse
 import com.konovus.apitesting.data.remote.responses.StockSummaryResponse
 import com.konovus.apitesting.data.remote.responses.TrendingStocksResponse
-import com.konovus.apitesting.BuildConfig.API_KEY_YH_FINANCE
 import retrofit2.Response
 import retrofit2.http.GET
 import retrofit2.http.Headers
@@ -41,7 +41,7 @@ interface YhFinanceApi {
         @Query("symbols") symbols: String,
         @Query("interval") interval: String = "60m",
         @Query("range") range: String = "1d"
-    ): Response<LinkedTreeMap<String, ChartsData>>
+    ): Response<LinkedTreeMap<String, ChartsDataResponse>>
 
 
 }

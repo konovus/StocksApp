@@ -8,10 +8,9 @@ import com.konovus.apitesting.data.local.entities.*
 import com.konovus.apitesting.data.redux.AppState
 import com.konovus.apitesting.data.redux.Store
 import com.konovus.apitesting.data.repository.AlphaVantageRepository
-import com.konovus.apitesting.data.repository.MainRepository
+import com.konovus.apitesting.data.repository.IMainRepository
 import com.konovus.apitesting.util.Constants.TEN_MINUTES
 import com.konovus.apitesting.util.Constants.TIME_SPANS
-import com.konovus.apitesting.util.NetworkStatus
 import com.konovus.apitesting.util.Resource
 import com.konovus.apitesting.util.toNDecimals
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -24,9 +23,19 @@ import javax.inject.Inject
 class InfoScreenViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val alphaVantageRepository: AlphaVantageRepository,
-    private val repository: MainRepository,
-    val store: Store<AppState>
+    private val repository: IMainRepository,
+    private val store: Store<AppState>,
 ) : ViewModel() {
+
+    private val symbol = savedStateHandle.get<String>("symbol")!!
+
+    val profile: Flow<Profile> = repository.getProfileFlow().map { profile ->
+        stateFlow.update { it.copy(
+            profile = profile,
+            isFavorite = profile.favorites.contains(symbol)) }
+        profile
+    }
+//    val portfolio: Flow<Portfolio> = repository.getPortfolioFlow()
 
     private var stateFlow = MutableStateFlow(InfoScreenStates())
     val state = stateFlow.asLiveData()
@@ -34,46 +43,22 @@ class InfoScreenViewModel @Inject constructor(
     private val eventChannel = Channel<String>()
     val event = eventChannel.receiveAsFlow()
 
-    private val symbol = savedStateHandle.get<String>("symbol")!!
-
-    init {
-        observeConnectivity()
-        initSetup()
-    }
 
     private fun sendEvent(message: String) = viewModelScope.launch {
         eventChannel.send(message)
     }
 
-    private fun observeConnectivity() {
-        viewModelScope.launch {
-            store.stateFlow.map { it.networkStatus }.distinctUntilChanged().collectLatest {
-                if (it == NetworkStatus.BackOnline)
-                    initSetup()
-            }
-        }
-    }
-
-    private fun initSetup() {
-        collectPortfolio()
+    fun initSetup() {
         val cacheHasStock = repository.stocksCache.map { it.symbol }.contains(symbol)
         val stockIsUpdated = (repository.stocksCache.find { it.symbol == symbol }?.lastUpdatedTime ?: 0) + TEN_MINUTES > System.currentTimeMillis()
         if (cacheHasStock && stockIsUpdated)
-            stateFlow.update { it.copy(
-                stock = repository.stocksCache.find { it.symbol == symbol }!!.copy(
-                isFavorite = repository.favoritesCache.map { it.symbol }.contains(symbol))) }
+            stateFlow.update { it.copy(stock = repository.stocksCache.find { it.symbol == symbol }!!) }
         else getStockSummary(symbol)
 
         val key = symbol + TIME_SPANS[0].first + TIME_SPANS[0].second
         if (repository.chartDataCache.containsKey(key))
             stateFlow.update { it.copy(chartData = repository.chartDataCache[key]) }
         else getCurrentChartData(symbol)
-    }
-
-    private fun collectPortfolio() = viewModelScope.launch {
-        repository.getPortfoliosFlow().collectLatest { portfolios ->
-            stateFlow.update { it.copy(portfolio = portfolios.first()) }
-        }
     }
 
     private fun getCurrentChartData(symbol: String, pos: Int = 0) = viewModelScope.launch {
@@ -84,7 +69,7 @@ class InfoScreenViewModel @Inject constructor(
             stateFlow.update { it.copy(
                 chartData = chartData.ifEmpty { null },
                 chartLoading = false,
-                stock = updateStockChartChange(chartData)
+                stock = getUpdatedStock(pos)
             ) }
         }
     }
@@ -93,12 +78,10 @@ class InfoScreenViewModel @Inject constructor(
         stateFlow.update { it.copy(isLoading = true) }
         val stockSummaryResult = repository.getStockSummary(symbol)
         processNetworkResult(stockSummaryResult) { stockResponse ->
-            val updatedStock = stockResponse.toStock().copy(
-                isFavorite = repository.favoritesCache.map { it.symbol }.contains(symbol)
-            )
-            repository.updateStocksCache(updatedStock)
+            //Todo check if stockResponse contains null  
+            repository.updateStocksCache(stockResponse.toStock())
             stateFlow.update { it.copy(
-                stock = updatedStock,
+                stock = stockResponse.toStock(),
                 isLoading = false
             ) }
         }
@@ -106,30 +89,28 @@ class InfoScreenViewModel @Inject constructor(
 
     fun onEvent(event: InfoScreenEvent) {
         when (event) {
-            is InfoScreenEvent.OnMarketOrderEvent -> {
-                viewModelScope.launch {
-                    stateFlow.value.portfolio?.let { portfolio ->
-                        val transactions = portfolio.transactions.toMutableList()
-                        transactions.add(event.transaction)
+            is InfoScreenEvent.OnMarketOrderEvent -> viewModelScope.launch {
+                    val transactions = stateFlow.value.profile!!.portfolio.transactions.toMutableList()
+                    transactions.add(event.transaction)
 
-                        val updatedPortfolio = portfolio.copy(
-                            transactions = transactions,
-                            totalBalance = (portfolio.totalBalance + if(event.transaction.orderType == OrderType.Buy)
-                                event.transaction.amount else - event.transaction.amount).toNDecimals(2)
-                        )
+                    val updatedPortfolio = stateFlow.value.profile!!.portfolio.copy(
+                        transactions = transactions,
+                        totalBalance = (stateFlow.value.profile!!.portfolio.totalBalance + if (event.transaction.orderType == OrderType.Buy)
+                            event.transaction.amount else - event.transaction.amount).toNDecimals(2)
+                    )
+                    if (updatedPortfolio.stocksToShareAmount.containsKey(symbol))
                         stateFlow.value.stock?.let { repository.updatePortfolioStocksCache(it.toQuote()) }
-                        repository.insertPortfolio(portfolio = updatedPortfolio)
-                    }
-                }
+                    else repository.removeFromPortfolioStocksCache(symbol)
+                    repository.updateProfile(profile = stateFlow.value.profile!!.copy(portfolio = updatedPortfolio))
             }
             is InfoScreenEvent.OnRetry -> initSetup()
             is InfoScreenEvent.OnFavorite -> {
                 viewModelScope.launch {
-                    event.stock?.let {
-                        val updatedStock = it.copy(isFavorite = !it.isFavorite)
-                        stateFlow.update { it.copy(stock = updatedStock) }
-                        repository.insertStock(updatedStock)
-                    }
+//                    val updatedStock = event.stock.copy(isFavorite = !event.stock.isFavorite)
+
+                    repository.updateProfile(stateFlow.value.profile!!.updateFavorites(symbol))
+//                    stateFlow.update { it.copy(isFavorite = !stateFlow.value.isFavorite) }
+                    repository.updateFavoritesCacheQuote(event.stock.toQuote())
                 }
             }
             is InfoScreenEvent.OnChangeChartTimeSpan -> {
@@ -139,10 +120,8 @@ class InfoScreenViewModel @Inject constructor(
                     if (repository.chartDataCache.containsKey(key)) {
                         stateFlow.update { it.copy(
                             chartData = repository.chartDataCache[key],
-                            chartLoading = false,
-                            stock = if (event.pos == 0)
-                                repository.stocksCache.find { it.symbol == symbol }
-                            else updateStockChartChange(repository.chartDataCache[key]!!)
+                            stock = getUpdatedStock(event.pos),
+                            chartLoading = false
                         ) }
                     } else getCurrentChartData(symbol, event.pos)
                 }
@@ -151,7 +130,10 @@ class InfoScreenViewModel @Inject constructor(
         }
     }
 
-    private fun updateStockChartChange(list: List<ChartData>): Stock? {
+    private fun getUpdatedStock(pos: Int): Stock? {
+        if (pos == 0)
+            return repository.stocksCache.find { it.symbol == symbol }
+        val list = repository.chartDataCache[symbol + TIME_SPANS[pos].first + TIME_SPANS[pos].second]!!
         val change = (list.last().close - list.first().close).toNDecimals(2)
         val changeInPercent = (change / list.first().close * 100).toNDecimals(2)
         return stateFlow.value.stock?.copy(
@@ -162,17 +144,13 @@ class InfoScreenViewModel @Inject constructor(
     private fun <T> processNetworkResult(
         result: Resource<T>,
         processBlock: suspend (T) -> Unit
-    ) {
-        viewModelScope.launch {
-            when (result) {
-                is Resource.Success -> {
-                    result.data?.let { processBlock(it) }
-                }
-                is Resource.Loading -> stateFlow.value = stateFlow.value.copy(isLoading = true)
-                is Resource.Error -> {
-                    sendEvent(message = result.message.orEmpty())
-                    stateFlow.update { it.copy(isLoading = false, chartLoading = false) }
-                }
+    ) = viewModelScope.launch {
+        when (result) {
+            is Resource.Success -> { result.data?.let { processBlock(it) } }
+            is Resource.Loading -> stateFlow.update { it.copy(isLoading = true) }
+            is Resource.Error -> {
+                sendEvent(message = result.message.orEmpty())
+                stateFlow.update { it.copy(isLoading = false, chartLoading = false) }
             }
         }
     }
@@ -180,10 +158,10 @@ class InfoScreenViewModel @Inject constructor(
     data class InfoScreenStates(
         val stock: Stock? = null,
         val chartData: List<ChartData>? = null,
-        val portfolio: Portfolio? = null,
+        val profile: Profile? = null,
+        val isFavorite: Boolean = false,
         val isLoading: Boolean = false,
         val chartLoading: Boolean = false,
-        val error: String? = null,
         val tabNr: Int = 0
     )
 }
@@ -191,7 +169,7 @@ class InfoScreenViewModel @Inject constructor(
 sealed class InfoScreenEvent {
     data class OnMarketOrderEvent(val transaction: Transaction) : InfoScreenEvent()
     object OnRetry : InfoScreenEvent()
-    data class OnFavorite(val stock: Stock?) : InfoScreenEvent()
+    data class OnFavorite(val stock: Stock) : InfoScreenEvent()
     data class OnChangeChartTimeSpan(val pos: Int): InfoScreenEvent()
     data class OnChangeTab(val nr: Int): InfoScreenEvent()
 }

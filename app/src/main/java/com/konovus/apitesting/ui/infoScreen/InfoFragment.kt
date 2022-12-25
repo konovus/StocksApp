@@ -23,20 +23,19 @@ import com.google.android.material.bottomnavigation.BottomNavigationView
 import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.google.android.material.snackbar.Snackbar
 import com.konovus.apitesting.R
-import com.konovus.apitesting.data.local.entities.ChartData
-import com.konovus.apitesting.data.local.entities.OrderType
-import com.konovus.apitesting.data.local.entities.Stock
-import com.konovus.apitesting.data.local.entities.Transaction
+import com.konovus.apitesting.data.local.entities.*
+import com.konovus.apitesting.data.validator.NullOrEmptyValidator
+import com.konovus.apitesting.data.validator.TransactionValidator
+import com.konovus.apitesting.data.validator.ValidateResult
 import com.konovus.apitesting.databinding.BottomSheetBinding
 import com.konovus.apitesting.databinding.InfoFragmentBinding
 import com.konovus.apitesting.transactionsItem
-import com.konovus.apitesting.util.MpMarker
-import com.konovus.apitesting.util.OnTabSelected
-import com.konovus.apitesting.util.toNDecimals
+import com.konovus.apitesting.util.*
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.map
+import javax.inject.Inject
 
 
 @AndroidEntryPoint
@@ -47,17 +46,34 @@ class InfoFragment : Fragment(R.layout.info_fragment) {
     private val viewModel: InfoScreenViewModel by viewModels()
     private val args: InfoFragmentArgs by navArgs()
     private lateinit var stock: Stock
+    private lateinit var profile: Profile
+    @Inject
+    lateinit var networkConnectionObserver: NetworkConnectionObserver
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         _binding = InfoFragmentBinding.bind(view)
 
+        observeNetworkConnectivity()
+        observeProfile()
         bindUiStateToLayout()
         bindTransactionsData()
         setupListeners()
         bindErrorHandling()
 
         requireActivity().findViewById<BottomNavigationView>(R.id.bottom_navigation).isVisible = false
+    }
+
+    private fun observeNetworkConnectivity() {
+        networkConnectionObserver.connection.observe(viewLifecycleOwner) {
+            if (it == NetworkStatus.Available || it == NetworkStatus.BackOnline)
+                viewModel.initSetup()
+        }
+    }
+
+    private fun observeProfile() {
+        viewModel.profile.distinctUntilChanged().asLiveData()
+            .observe(viewLifecycleOwner) { profile = it }
     }
 
     private fun bindUiStateToLayout() {
@@ -69,7 +85,7 @@ class InfoFragment : Fragment(R.layout.info_fragment) {
     }
 
     private fun bindTransactionsData() = binding.apply {
-        combine(viewModel.state.map { it.portfolio?.transactions }.asFlow().filterNotNull(),
+        combine(viewModel.profile.map { it.portfolio.transactions },
             viewModel.state.map { it.tabNr }.asFlow(), ::Pair).distinctUntilChanged()
             .asLiveData().observe(viewLifecycleOwner) { pair ->
             val transactions = pair.first.filter { it.symbol == args.symbol }
@@ -90,8 +106,6 @@ class InfoFragment : Fragment(R.layout.info_fragment) {
     }
 
     private fun showBottomSheet() {
-        if (viewModel.state.value?.portfolio == null) return
-
         val bottomSheet = BottomSheetDialog(requireContext())
         val bottomSheetBinding = BottomSheetBinding.inflate(layoutInflater)
         bottomSheet.setContentView(bottomSheetBinding.root)
@@ -112,55 +126,32 @@ class InfoFragment : Fragment(R.layout.info_fragment) {
                 sumInput.clearFocus()
             }
             sumInput.doOnTextChanged { text, _, _, _ ->
-                bottomSheetBinding.validateAmountInput(text, orderType)
+                checkValidation(TransactionValidator(text.toString(), orderType, profile.portfolio, stock, requireContext()).validate())
             }
             confirmBtn.setOnClickListener {
-                if ( !bottomSheetBinding.confirmTransaction(orderType)) return@setOnClickListener
-                bottomSheet.hide()
-                Toast.makeText(requireContext(), "$orderType order confirmed", Toast.LENGTH_LONG)
-                        .show()
-            }
-        }
-    }
-
-    private fun BottomSheetBinding.confirmTransaction(orderType: OrderType): Boolean {
-        if (sumInput.text.isNullOrEmpty()) sumInputWrap.error = "Amount cannot be empty"
-        if (!sumInputWrap.error.isNullOrEmpty()) return false
-
-        viewModel.onEvent(
-            InfoScreenEvent.OnMarketOrderEvent(
-                Transaction(
-                    price = stock.price,
-                    symbol = stock.symbol,
-                    amount = sumInput.text.toString().toDouble().toNDecimals(2),
-                    dateTime = System.currentTimeMillis(),
-                    orderType = orderType
+                checkValidation(NullOrEmptyValidator(sumInput.text.toString(), requireContext()).validate())
+                if (sumInputWrap.error != null) return@setOnClickListener
+                viewModel.onEvent(
+                    InfoScreenEvent.OnMarketOrderEvent(
+                        Transaction(
+                            price = stock.price,
+                            symbol = stock.symbol,
+                            amount = sumInput.text.toString().toDouble().toNDecimals(2),
+                            dateTime = System.currentTimeMillis(),
+                            orderType = orderType
+                        )
+                    )
                 )
-            )
-        )
-        return true
+                bottomSheet.hide()
+                Toast.makeText(requireContext(), "$orderType order confirmed", Toast.LENGTH_LONG).show()
+            }
+        }
     }
 
-    private fun BottomSheetBinding.validateAmountInput(text: CharSequence?, orderType: OrderType) {
-        if (text.isNullOrEmpty()) return
-
-        if (orderType == OrderType.Sell) {
-            val portfolio = viewModel.state.value?.portfolio!!
-            if (portfolio.stocksToShareAmount.isEmpty()) {
-                sumInputWrap.error = "No shares to sell"
-                return
-            }
-            val amountToSell = text.toString().toDouble()
-            val amountOwned = portfolio.stocksToShareAmount.getValue(args.symbol).times(
-                stock.price).toNDecimals(2)
-            if (amountToSell > amountOwned)
-                sumInputWrap.error = "Max to sell is $amountOwned"
-            else sumInputWrap.error = null
-        } else {
-            if (text.toString().toDouble() !in 1.0..10000.0)
-                sumInputWrap.error = "Amount must be between 1 and 10000!"
-            else sumInputWrap.error = null
-        }
+    private fun BottomSheetBinding.checkValidation(validationResult: ValidateResult) {
+        if (validationResult.isSuccess)
+            sumInputWrap.error = null
+        else sumInputWrap.error = validationResult.message
     }
 
     private fun setupChart(chartData: List<ChartData>?) = binding.apply {

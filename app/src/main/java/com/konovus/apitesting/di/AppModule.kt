@@ -6,12 +6,16 @@ import com.konovus.apitesting.data.api.AlphaVantageApi
 import com.konovus.apitesting.data.api.YhFinanceApi
 import com.konovus.apitesting.data.local.dao.CompanyDao
 import com.konovus.apitesting.data.local.dao.PortfolioDao
+import com.konovus.apitesting.data.local.dao.ProfileDao
 import com.konovus.apitesting.data.local.dao.StockDao
 import com.konovus.apitesting.data.local.db.CompaniesDatabase
 import com.konovus.apitesting.data.local.db.PortfolioDatabase
+import com.konovus.apitesting.data.local.db.ProfileDatabase
 import com.konovus.apitesting.data.local.db.StockDatabase
 import com.konovus.apitesting.data.redux.AppState
 import com.konovus.apitesting.data.redux.Store
+import com.konovus.apitesting.data.repository.IMainRepository
+import com.konovus.apitesting.data.repository.MainRepository
 import com.konovus.apitesting.util.Constants.BASE_URL_ALPHA_VANTAGE
 import com.konovus.apitesting.util.Constants.BASE_URL_YH_FINANCE
 import com.konovus.apitesting.util.NetworkConnectionObserver
@@ -34,6 +38,17 @@ object AppModule {
     fun provideAppStateStore(): Store<AppState> {
         return Store(AppState())
     }
+
+    @Provides
+    @Singleton
+    fun provideMainRepository(
+        stockDao: StockDao,
+        portfolioDao: PortfolioDao,
+        yhFinanceApi: YhFinanceApi,
+        profileDao: ProfileDao
+    ): IMainRepository =
+        MainRepository(stockDao, portfolioDao, yhFinanceApi, profileDao)
+
 
     private val moshi = Moshi.Builder()
         .add(KotlinJsonAdapterFactory())
@@ -74,6 +89,18 @@ object AppModule {
 
     @Provides
     @Singleton
+    fun provideProfileDatabase(app: Application): ProfileDatabase {
+        return Room.databaseBuilder(
+            app,
+            ProfileDatabase::class.java,
+            "profile_db"
+        )
+            .fallbackToDestructiveMigration()
+            .build()
+    }
+
+    @Provides
+    @Singleton
     fun provideCompanyDatabase(app: Application): CompaniesDatabase {
         return Room.databaseBuilder(
             app,
@@ -98,6 +125,10 @@ object AppModule {
     @Provides
     @Singleton
     fun provideStockDao(db: StockDatabase): StockDao = db.dao
+
+    @Provides
+    @Singleton
+    fun provideProfileDao(db: ProfileDatabase): ProfileDao = db.dao
 
     @Provides
     @Singleton

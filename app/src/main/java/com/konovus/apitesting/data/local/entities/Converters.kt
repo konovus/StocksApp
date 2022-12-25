@@ -34,7 +34,7 @@ class Converters {
         return adapter.fromJson(json)!!
     }
 
-        @TypeConverter
+    @TypeConverter
     fun fromTransactionList(data: List<Transaction>): String{
         val type = Types.newParameterizedType(List::class.java, Transaction::class.java)
         val adapter = moshi.adapter<List<Transaction>>(type)
@@ -48,6 +48,19 @@ class Converters {
     }
 
     @TypeConverter
+    fun fromFavorites(data: List<String>): String{
+        val type = Types.newParameterizedType(List::class.java, String::class.java)
+        val adapter = moshi.adapter<List<String>>(type)
+        return adapter.toJson(data)
+    }
+    @TypeConverter
+    fun toFavorites(json: String): List<String> {
+        val type = Types.newParameterizedType(List::class.java, String::class.java)
+        val adapter = moshi.adapter<List<String>>(type)
+        return adapter.fromJson(json)!!
+    }
+
+    @TypeConverter
     fun fromChartChange(chartChange: Stock.ChartChange?): String {
         return moshi.adapter(Stock.ChartChange::class.java).toJson(chartChange)
     }
@@ -55,6 +68,16 @@ class Converters {
     @TypeConverter
     fun toChartChange(json: String): Stock.ChartChange? {
         return moshi.adapter(Stock.ChartChange::class.java).fromJson(json)
+    }
+
+    @TypeConverter
+    fun fromPortfolio(portfolio: Portfolio): String {
+        return moshi.adapter(Portfolio::class.java).toJson(portfolio)
+    }
+
+    @TypeConverter
+    fun toPortfolio(json: String): Portfolio {
+        return moshi.adapter(Portfolio::class.java).fromJson(json)!!
     }
 
     @TypeConverter

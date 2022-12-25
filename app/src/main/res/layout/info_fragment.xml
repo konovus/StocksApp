@@ -10,9 +10,6 @@
             name="selected"
             type="Integer" />
         <variable
-            name="tabNr"
-            type="Integer" />
-        <variable
             name="noTransactions"
             type="Boolean" />
         <variable
@@ -78,7 +75,7 @@
                         android:text="@string/follow"
                         android:textColor="@color/gray"
                         android:textSize="16sp"
-                        android:drawableEnd="@{state.stock.isFavorite ? @drawable/ic_star : @drawable/ic_star_outline}"
+                        android:drawableEnd="@{state.isFavorite ? @drawable/ic_star : @drawable/ic_star_outline}"
                         app:drawableTint="@color/gray"
                         app:layout_constraintEnd_toEndOf="parent"
                         app:layout_constraintTop_toTopOf="@id/back_arrow" />
@@ -235,7 +232,7 @@
                         android:text="No Transactions"
                         android:textColor="@color/dark_gray"
                         android:textSize="20sp"
-                        android:visibility="@{noTransactions &amp;&amp; state.tabNr == 2 ? View.VISIBLE: View.INVISIBLE}"
+                        android:visibility="@{noTransactions &amp;&amp; state.tabNr == 2 ? View.VISIBLE: View.GONE}"
                         android:layout_marginTop="100dp"
                         app:layout_constraintStart_toStartOf="parent"
                         app:layout_constraintEnd_toEndOf="parent"
@@ -251,14 +248,14 @@
                         app:stock="@{state.stock}"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:visibility="@{state.tabNr == 0 ? View.VISIBLE : View.INVISIBLE}"
+                        android:visibility="@{state.tabNr == 0 ? View.VISIBLE : View.GONE}"
                         app:layout_constraintTop_toBottomOf="@id/tab_layout" />
 
                     <include layout="@layout/description_tab_page"
                         android:id="@+id/description_tab"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:visibility="@{state.tabNr == 1 ? View.VISIBLE : View.INVISIBLE}"
+                        android:visibility="@{state.tabNr == 1 ? View.VISIBLE : View.GONE}"
                         app:layout_constraintTop_toBottomOf="@id/tab_layout"
                         app:stock="@{state.stock}"
                         />
@@ -267,7 +264,7 @@
                         android:id="@+id/transactions_tab"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:visibility="@{state.tabNr == 2 ? View.VISIBLE : View.INVISIBLE}"
+                        android:visibility="@{state.tabNr == 2 ? View.VISIBLE : View.GONE}"
                         app:layout_constraintTop_toBottomOf="@id/tab_layout"/>
 
 
@@ -289,7 +286,7 @@
             android:fontFamily="@font/ubuntu_bold"
             android:background="@drawable/rounded_25_shape"
             app:backgroundTint="@color/green"
-            android:visibility="@{state.stock == null ? View.INVISIBLE : View.VISIBLE}"
+            android:visibility="@{state.stock == null ? View.GONE : View.VISIBLE}"
             android:layout_alignParentBottom="true"
             />
     </RelativeLayout>

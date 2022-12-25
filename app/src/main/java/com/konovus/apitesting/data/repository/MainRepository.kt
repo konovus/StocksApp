@@ -7,19 +7,20 @@ import com.google.gson.internal.LinkedTreeMap
 import com.google.gson.reflect.TypeToken
 import com.konovus.apitesting.data.api.YhFinanceApi
 import com.konovus.apitesting.data.local.dao.PortfolioDao
+import com.konovus.apitesting.data.local.dao.ProfileDao
 import com.konovus.apitesting.data.local.dao.StockDao
 import com.konovus.apitesting.data.local.entities.ChartData
 import com.konovus.apitesting.data.local.entities.Portfolio
+import com.konovus.apitesting.data.local.entities.Profile
 import com.konovus.apitesting.data.local.entities.Stock
 import com.konovus.apitesting.data.local.models.Quote
-import com.konovus.apitesting.data.remote.responses.ChartsData
+import com.konovus.apitesting.data.remote.responses.ChartsDataResponse
 import com.konovus.apitesting.data.remote.responses.MultipleQuotesResponse
 import com.konovus.apitesting.data.remote.responses.StockSummaryResponse
 import com.konovus.apitesting.data.remote.responses.TrendingStocksResponse
 import com.konovus.apitesting.util.Constants.TAG
 import com.konovus.apitesting.util.Resource
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import retrofit2.HttpException
@@ -31,45 +32,59 @@ import javax.inject.Singleton
 class MainRepository @Inject constructor(
     private val stockDao: StockDao,
     private val portfolioDao: PortfolioDao,
-    private val yhFinanceApi: YhFinanceApi
-) {
+    private val yhFinanceApi: YhFinanceApi,
+    private val profileDao: ProfileDao,
+) : IMainRepository {
 
     // Mutex to make writes to cached values thread-safe.
     private val mutex = Mutex()
 
-    private val _favoritesCache = mutableListOf<Stock>()
-    val favoritesCache: List<Stock>
+    private val _favoritesCache = mutableListOf<Quote>()
+    override val favoritesCache: List<Quote>
         get() = _favoritesCache.toList()
 
     private val _stocksCache = mutableListOf<Stock>()
-    val stocksCache: List<Stock>
+    override val stocksCache: List<Stock>
         get() = _stocksCache.toList()
 
     private val _chartDataCache = mutableMapOf<String, List<ChartData>>()
-    val chartDataCache: Map<String, List<ChartData>>
+    override val chartDataCache: Map<String, List<ChartData>>
         get() = _chartDataCache.toMap()
 
-    private val _portfolioQuotesCache = mutableListOf<Quote>()
-    val portfolioQuotesCache: List<Quote>
+     private val _portfolioQuotesCache = mutableListOf<Quote>()
+     override val portfolioQuotesCache: List<Quote>
         get() = _portfolioQuotesCache.toList()
 
-    suspend fun updatePortfolioStocksCache(quote: Quote) = mutex.withLock {
+    override suspend fun updateFavoritesCache(quotes: List<Quote>) = mutex.withLock {
+        _favoritesCache.clear()
+        _favoritesCache.addAll(quotes)
+    }
+
+    override suspend fun updateFavoritesCacheQuote(quote: Quote): Unit = mutex.withLock {
+        _favoritesCache.removeIf { quote.symbol == it.symbol }
+        _favoritesCache.add(quote)
+    }
+
+    override suspend fun updatePortfolioStocksCache(quote: Quote) = mutex.withLock {
         _portfolioQuotesCache.removeIf { it.symbol == quote.symbol }
         _portfolioQuotesCache.add(quote)
     }
 
-    suspend fun updateChartDataCache(key: String, value: List<ChartData>) = mutex.withLock {
+    override suspend fun removeFromPortfolioStocksCache(symbol: String) {
+        _portfolioQuotesCache.removeIf { it.symbol == symbol }
+    }
+
+    override suspend fun updateChartDataCache(key: String, value: List<ChartData>) = mutex.withLock {
         _chartDataCache[key] = value
     }
 
-    suspend fun updateStocksCache(stock: Stock) = mutex.withLock {
+    override suspend fun updateStocksCache(stock: Stock) = mutex.withLock {
         _stocksCache.removeIf { it.symbol == stock.symbol }
         _stocksCache.add(stock)
     }
 
-
-    private suspend fun <T> makeNetworkCall(
-        tag: String = "",
+    override suspend fun <T> makeNetworkCall(
+        tag: String,
         callBlock: suspend () -> Response<T>
     ): Resource<T> {
         val response: Response<T>?
@@ -86,61 +101,56 @@ class MainRepository @Inject constructor(
                 Resource.Success(data = it)
             } ?: Resource.Error("Null response body, try again.")
         } catch (e: JsonSyntaxException) {
-            Log.i(TAG, "JsonSyntax Error. ${e.message}")
             Resource.Error("JsonSyntax Error. ${e.message}", null)
         } catch (e: HttpException) {
-            Log.i(TAG, "makeNetworkCall Error: $tag , ${e.message} , ${e.localizedMessage}")
             Resource.Error("Couldn't reach the server. Check your internet connection.", null)
         } catch (e: Exception) {
-            Log.i(TAG, "makeNetworkCall: Unknown Error: ${e.message} , ${e.localizedMessage}.")
             Resource.Error("Couldn't reach the server. Check your internet connection.", null)
         }
     }
 
-    suspend fun fetchMultipleChartsData(symbols: String): Resource<LinkedTreeMap<String, ChartsData>> {
+    override suspend fun fetchMultipleChartsData(symbols: String): Resource<LinkedTreeMap<String, ChartsDataResponse>> {
         return makeNetworkCall("charts $symbols") {
             yhFinanceApi.fetchMultipleChartsData(symbols)
         }
     }
 
-    suspend fun getStockSummary(symbol: String): Resource<StockSummaryResponse> = makeNetworkCall(symbol) {
+    override suspend fun getStockSummary(symbol: String): Resource<StockSummaryResponse> = makeNetworkCall(symbol) {
         yhFinanceApi.getStockSummary(symbol)
     }
-    suspend fun fetchTrendingStocks(): Resource<TrendingStocksResponse> = makeNetworkCall("trending") {
+
+    override suspend fun fetchTrendingStocks(): Resource<TrendingStocksResponse> = makeNetworkCall("trending") {
         yhFinanceApi.fetchTrendingStocks()
     }
 
-    suspend fun fetchUpdatedQuotes(symbols: String): Resource<MultipleQuotesResponse> {
+    override suspend fun fetchUpdatedQuotes(symbols: String): Resource<MultipleQuotesResponse> {
         return makeNetworkCall(symbols) {
             yhFinanceApi.fetchMultipleQuotes(symbols)
         }
     }
 
-    suspend fun updatePortfolio(portfolio: Portfolio) = portfolioDao.updatePortfolio(portfolio)
+    override fun getFavoritesFlow(): Flow<List<Stock>> = stockDao.getAllFavoriteStocksFlow()
 
-    fun getFavoritesFlow(): Flow<List<Stock>> {
-        return stockDao.getAllFavoriteStocksFlow().map { list ->
-            _favoritesCache.clear()
-            _favoritesCache.addAll(list)
-            list
-        }
-    }
+    override fun getFavoritesNr(): Flow<Int> = stockDao.getTotalFavStocks()
 
+    override suspend fun insertStock(stock: Stock) = stockDao.insertStock(stock)
 
-    suspend fun getFavoritesNr() = stockDao.getTotalFavStocks()
+    override suspend fun getStock(symbol: String): Stock? = stockDao.getStockBySymbol(symbol)
 
-    suspend fun insertStock(stock: Stock) = stockDao.insertStock(stock)
+    override suspend fun insertPortfolio(portfolio: Portfolio) = portfolioDao.insertPortfolio(portfolio)
 
-    suspend fun insertStocks(stocks: List<Stock>) = stockDao.insertStocks(stocks)
+    override suspend fun updatePortfolio(portfolio: Portfolio) = portfolioDao.updatePortfolio(portfolio)
 
-    suspend fun getStockBySymbol(symbol: String) = stockDao.getStockBySymbol(symbol)
+    override fun getPortfolioFlow() = portfolioDao.getPortfolioFlow()
 
-    suspend fun updateStocks(stocks: List<Stock>) = stockDao.updateStocks(stocks)
+    override suspend fun getPortfolio() = portfolioDao.getPortfolioById()
 
-    suspend fun insertPortfolio(portfolio: Portfolio) = portfolioDao.insertPortfolio(portfolio)
+    override fun getProfileFlow(): Flow<Profile> = profileDao.getProfileFlow()
 
-    fun getPortfoliosFlow() = portfolioDao.getAllPortfolios()
+    override suspend fun insertProfile(profile: Profile) = profileDao.insert(profile)
 
-    suspend fun getPortfolio() = portfolioDao.getPortfolioById()
+    override suspend fun updateProfile(profile: Profile) = profileDao.update(profile)
+
+    override suspend fun getProfile(): Profile? = profileDao.getProfile()
 
 }

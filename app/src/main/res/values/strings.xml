@@ -15,4 +15,10 @@
     <string name="tab_item_1">Statistics</string>
     <string name="tab_item_2">Description</string>
     <string name="tab_item_3">Transactions</string>
+    <string name="empty_input">Field cannot be empty</string>
+    <string name="less_than_one">Min to sell is 1</string>
+    <string name="no_shares_to_sell">No shares to sell</string>
+    <string name="max_to_sell">Max to sell is %1$s</string>
+    <string name="amount_between">Amount must be between 1 and 10000</string>
+    <string name="valid_number">Enter a valid number</string>
 </resources>

@@ -14,17 +14,11 @@ interface PortfolioDao {
     @Insert(onConflict = REPLACE)
     suspend fun insertPortfolio(portfolio: Portfolio)
 
-    @Insert(onConflict = REPLACE)
-    fun prepopulatePortfolioDB(portfolio: Portfolio)
-
-    @Query("select count(id) from portfolios_table")
-    fun portfolioCount(): Int
-
     @Update(onConflict = REPLACE)
     suspend fun updatePortfolio(portfolio: Portfolio)
 
-    @Query("select * from portfolios_table order by id asc")
-    fun getAllPortfolios(): Flow<List<Portfolio>>
+    @Query("select * from portfolios_table where :id = id")
+    fun getPortfolioFlow(id: Int = 1): Flow<Portfolio>
 
     @Query("select * from portfolios_table where :id = id")
     suspend fun getPortfolioById(id: Int = 1): Portfolio?

@@ -44,7 +44,7 @@ interface CompanyDao {
             "WHEN upper(:query) == symbol THEN 1 " +
             "ELSE 2 END")
     fun searchCompanyInfoPaged(
-        query: String
+        query: String = ""
     ): PagingSource<Int, CompanyInfo>
 
     @Query("SELECT EXISTS (SELECT 1 FROM companyinfo WHERE symbol = :symbol)")

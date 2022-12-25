@@ -5,8 +5,8 @@
 
     <data>
         <variable
-            name="portfolio"
-            type="com.konovus.apitesting.data.local.entities.Portfolio" />
+            name="profile"
+            type="com.konovus.apitesting.data.local.entities.Profile" />
     </data>
 
     <androidx.constraintlayout.widget.ConstraintLayout
@@ -61,7 +61,7 @@
                 android:id="@+id/total_balance_tv"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="@{`$` + String.valueOf(portfolio.totalBalance)}"
+                android:text="@{`$` + String.valueOf(profile.portfolio.totalBalance)}"
                 android:textColor="@color/gray"
                 android:textSize="32sp"
                 android:textStyle="bold"
@@ -88,9 +88,9 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:paddingVertical="4dp"
-                android:text="@{portfolio.change == 0 ? `$` + String.valueOf(portfolio.change) + ` / ` + String.valueOf(portfolio.changePercent) + `%` : (portfolio.change > 0 ? `+` + String.valueOf(portfolio.change) + ` / ` + String.valueOf(portfolio.changePercent) + `%` : `-` + String.valueOf(portfolio.change).substring(1) + ` / ` + String.valueOf(portfolio.changePercent) + `%`) }"
+                android:text="@{profile.portfolio.change == 0 ? `$` + String.valueOf(profile.portfolio.change) + ` / ` + String.valueOf(profile.portfolio.changePercent) + `%` : (profile.portfolio.change > 0 ? `+` + String.valueOf(profile.portfolio.change) + ` / ` + String.valueOf(profile.portfolio.changePercent) + `%` : `-` + String.valueOf(profile.portfolio.change).substring(1) + ` / ` + String.valueOf(profile.portfolio.changePercent) + `%`) }"
                 android:textSize="20sp"
-                android:textColor="@{portfolio.change == 0 ? @color/gray : (portfolio.change > 0 ? @color/green : @color/red_orange)}"
+                android:textColor="@{profile.portfolio.change == 0 ? @color/gray : (profile.portfolio.change > 0 ? @color/green : @color/red_orange)}"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintTop_toTopOf="@id/total_balance_tv"
                 app:layout_constraintBottom_toBottomOf="@id/total_balance_tv" />

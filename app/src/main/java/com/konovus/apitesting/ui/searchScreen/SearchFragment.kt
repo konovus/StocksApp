@@ -12,15 +12,17 @@ import androidx.core.widget.doOnTextChanged
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.asLiveData
-import androidx.lifecycle.distinctUntilChanged
 import androidx.navigation.fragment.findNavController
 import com.konovus.apitesting.R
 import com.konovus.apitesting.data.local.entities.CompanyInfo
 import com.konovus.apitesting.databinding.SearchFragmentBinding
+import com.konovus.apitesting.ui.MainActivity
 import com.konovus.apitesting.util.Constants.TAG
+import com.konovus.apitesting.util.NetworkConnectionObserver
 import com.konovus.apitesting.util.NetworkStatus
 import dagger.hilt.android.AndroidEntryPoint
-
+import kotlinx.coroutines.flow.distinctUntilChanged
+import javax.inject.Inject
 
 @AndroidEntryPoint
 class SearchFragment : Fragment(R.layout.search_fragment), SearchAdapter.OnItemClickListener {
@@ -28,22 +30,41 @@ class SearchFragment : Fragment(R.layout.search_fragment), SearchAdapter.OnItemC
     private var _binding: SearchFragmentBinding? = null
     private val binding get() = _binding!!
     private val viewModel: SearchViewModel by viewModels()
+    @Inject
+    lateinit var networkConnectionObserver: NetworkConnectionObserver
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         _binding = SearchFragmentBinding.bind(view)
-        viewModel.updateBottomNavSelectedId(R.id.searchFragment)
+        (activity as? MainActivity)?.navigateToTab(R.id.searchFragment)
 
+        //observeNetworkConnectivity()
         setupSearchView()
         bindLayoutData()
+        bindListeners()
+    }
+
+    private fun observeNetworkConnectivity() {
+        networkConnectionObserver.connection.observe(viewLifecycleOwner) {
+            if (it == NetworkStatus.Available || it == NetworkStatus.BackOnline) {
+                Log.i(TAG, "observeNetworkConnectivity: ")
+                viewModel.getCompanyListings()
+            }
+        }
+    }
+
+    private fun bindListeners() {
+        binding.swipeRefreshLayout.setOnRefreshListener {
+            viewModel.onEvent(SearchScreenEvent.Refresh)
+        }
     }
 
     private fun bindLayoutData() {
         viewModel.state.observe(viewLifecycleOwner) { state ->
             binding.progressBar.isVisible = state.isLoading
-            binding.swipeRefreshLayout.isRefreshing = state.isRefreshing
 
-            state.companies.asLiveData().distinctUntilChanged().observe(viewLifecycleOwner) {
+            state.companies.distinctUntilChanged().asLiveData().observe(viewLifecycleOwner) {
+                Log.i(TAG, "bindLayoutData: ")
                 val adapter = SearchAdapter(this@SearchFragment)
                 binding.recyclerView.adapter = adapter
                 adapter.submitData(lifecycle, it)
@@ -80,9 +101,7 @@ class SearchFragment : Fragment(R.layout.search_fragment), SearchAdapter.OnItemC
                             searchView.requestFocus()
                             val imm = requireContext().getSystemService(Activity.INPUT_METHOD_SERVICE) as InputMethodManager
                             imm.showSoftInput(searchView, InputMethodManager.SHOW_IMPLICIT)
-                        } else
-//                            if (searchView.text.isNotEmpty())
-                            {
+                        } else {
                             searchView.setText("")
                             viewModel.onEvent(SearchScreenEvent.OnSearchQueryChange(""))
                         }

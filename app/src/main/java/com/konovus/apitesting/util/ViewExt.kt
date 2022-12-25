@@ -5,7 +5,6 @@ import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Color
 import android.view.View
-import java.util.concurrent.Executors
 import androidx.appcompat.widget.SearchView
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
@@ -18,6 +17,7 @@ import androidx.recyclerview.widget.ItemTouchHelper
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.tabs.TabLayout
 import kotlinx.coroutines.flow.first
+import java.util.concurrent.Executors
 import kotlin.math.ln
 import kotlin.math.pow
 
@@ -77,7 +77,7 @@ fun <T, S> LiveData<T?>.combineWith(other: LiveData<S?>): LiveData<Pair<T?, S?>>
         addSource(other) { value = Pair(this@combineWith.value, it) }
     }
 
-fun <T> List<T>.replace(newValue: T, block: (T) -> Boolean): List<T> {
+fun <T> List<T>.replaceIf(newValue: T, block: (T) -> Boolean): List<T> {
     return map {
         if (block(it)) newValue else it
     }

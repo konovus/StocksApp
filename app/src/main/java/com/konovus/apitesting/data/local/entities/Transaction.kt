@@ -3,8 +3,6 @@ package com.konovus.apitesting.data.local.entities
 import android.os.Parcelable
 import kotlinx.parcelize.Parcelize
 import java.text.SimpleDateFormat
-import java.time.LocalDate
-import java.time.format.DateTimeFormatter
 import java.util.*
 
 @Parcelize
@@ -22,6 +20,6 @@ data class Transaction(
     }
 }
 
-enum class OrderType(value: String){
-    Buy("BUY"), Sell("SELL")
+enum class OrderType {
+    Buy, Sell
 }

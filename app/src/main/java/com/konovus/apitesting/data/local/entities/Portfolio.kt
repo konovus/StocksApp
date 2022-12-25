@@ -3,6 +3,7 @@ package com.konovus.apitesting.data.local.entities
 import android.os.Parcelable
 import androidx.room.Entity
 import androidx.room.PrimaryKey
+import com.konovus.apitesting.util.toNDecimals
 import kotlinx.parcelize.Parcelize
 
 @Entity(tableName = "portfolios_table")
@@ -21,7 +22,7 @@ data class Portfolio(
         get() = transactions.map {
             it.symbol to if (it.orderType == OrderType.Buy) (it.amount / it.price)
             else -(it.amount / it.price)
-        }.groupBy { it.first }.map { it.key to it.value.map { it.second }.sumOf { it } }
-            .toMap().filter { it.value > 0 }
+        }.groupBy { it.first }.map { it.key to it.value.map { it.second }.sumOf { it }.toNDecimals(6) }
+            .toMap().filter { it.value > 0.01 }
 
 }
