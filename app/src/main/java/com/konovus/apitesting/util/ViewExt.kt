@@ -11,15 +11,30 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
+import androidx.lifecycle.LifecycleCoroutineScope
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MediatorLiveData
 import androidx.recyclerview.widget.ItemTouchHelper
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.tabs.TabLayout
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import java.util.concurrent.Executors
 import kotlin.math.ln
 import kotlin.math.pow
+
+private var job: Job? = null
+
+fun runAtInterval(coroutineScope: LifecycleCoroutineScope, interval: Long, block: () -> Unit) {
+    job?.cancel()
+    job = coroutineScope.launchWhenStarted {
+        while (true) {
+            block()
+            delay(interval)
+        }
+    }
+}
 
 inline fun SearchView.onQueryTextChanged(
     searchView: SearchView?,

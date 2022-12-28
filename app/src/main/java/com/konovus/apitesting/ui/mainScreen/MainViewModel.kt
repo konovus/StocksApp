@@ -24,11 +24,14 @@ import javax.inject.Inject
 @HiltViewModel
 class MainViewModel @Inject constructor(
     private val repository: IMainRepository,
-//    val store: Store<AppState>
 ) : ViewModel() {
 
-    val profile: LiveData<Profile> = repository.getProfileFlow().mapLatest { profile ->
-        updateFavoritesUiState(profile.favorites)
+    val profile: LiveData<Profile?> = repository.getProfileFlow().mapLatest { profile ->
+        Log.i(TAG, "MVM profile: $profile")
+        if (profile != null)
+            updateFavoritesUiState(profile.favorites)
+        else if (repository.getProfileById(1) == null)
+            repository.insertProfile(Profile())
         profile
     }.asLiveData()
 
@@ -48,11 +51,6 @@ class MainViewModel @Inject constructor(
     private val eventChannel = Channel<String>()
     val event = eventChannel.receiveAsFlow()
 
-    init {
-        createDefaultProfile()
-
-    }
-
     private fun sendEvent(message: String) = viewModelScope.launch {
         eventChannel.send(message)
     }
@@ -60,7 +58,6 @@ class MainViewModel @Inject constructor(
     private fun updatePortfolioStocksPrices(symbols: String) = viewModelScope.launch {
         val result = repository.fetchUpdatedQuotes(symbols)
         processNetworkResult(result) { list ->
-            Log.i(TAG, "updatePortfolioStocksPrices: $list")
             val responseList = list.quoteResponse.result.filterNot {
                 it.toString().contains("null")
             }.map { it.toQuote() }
@@ -76,13 +73,13 @@ class MainViewModel @Inject constructor(
         updatePortfolioStocksPrices(portfolio.stocksToShareAmount.keys.joinToString(","))
         val updatedBalance = repository.portfolioQuotesCache.sumOf {
             it.price.toDouble() * portfolio.stocksToShareAmount[it.symbol]!!
-        }
+        }.toNDecimals(2)
         if (updatedBalance == 0.0) return@launch
         val initialBalance = portfolio.transactions.filter { it.orderType == OrderType.Buy }.sumOf { it.amount }
-            .minus(portfolio.transactions.filter { it.orderType == OrderType.Sell }.sumOf { it.amount })
+            .minus(portfolio.transactions.filter { it.orderType == OrderType.Sell }.sumOf { it.amount }).toNDecimals(2)
         val change = updatedBalance - initialBalance
         val updatedPortfolio = portfolio.copy(
-            totalBalance = updatedBalance.toNDecimals(2),
+            totalBalance = updatedBalance,
             change = change.toNDecimals(2),
             changePercent = (change / initialBalance * 100).toNDecimals(2),
             lastUpdatedTime = System.currentTimeMillis()
@@ -100,9 +97,8 @@ class MainViewModel @Inject constructor(
     }
 
     fun updateFavoritesQuotes() = viewModelScope.launch {
-        val quotesAreUpdated = if (favoritesStateFlow.value.quotes.isNullOrEmpty())
-            false
-        else favoritesStateFlow.value.quotes!!.minOf { it.lastTimeUpdated } + TEN_MINUTES > System.currentTimeMillis()
+        val quotesAreUpdated = repository.favoritesCache.isNotEmpty() &&
+                repository.favoritesCache.minOf { it.lastTimeUpdated } + TEN_MINUTES > System.currentTimeMillis()
 
         if (!favoritesStateFlow.value.hasFavorites || favoritesStateFlow.value.isFetchingQuotes || quotesAreUpdated) return@launch
         favoritesStateFlow.update { it.copy(isFetchingQuotes = true) }
@@ -111,6 +107,7 @@ class MainViewModel @Inject constructor(
         processNetworkResult(responseMultipleQuotes) { result ->
             val quotes = result.quoteResponse.result.map { data -> data.toQuote() }
             favoritesStateFlow.update { it.copy(quotes = quotes, isFetchingQuotes = false) }
+            repository.updateFavoritesCache(quotes)
         }
     }
 
@@ -161,11 +158,6 @@ class MainViewModel @Inject constructor(
                 }
             }
         }
-    }
-
-    private fun createDefaultProfile() = viewModelScope.launch {
-        if (repository.getProfile() == null)
-            repository.insertProfile(Profile())
     }
 
     data class FavoritesUiState(

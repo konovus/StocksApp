@@ -62,11 +62,11 @@ interface IMainRepository {
 
     suspend fun getPortfolio(): Portfolio?
 
-    fun getProfileFlow(): Flow<Profile>
+    fun getProfileFlow(): Flow<Profile?>
 
     suspend fun insertProfile(profile: Profile)
 
     suspend fun updateProfile(profile: Profile)
 
-    suspend fun getProfile(): Profile?
+    suspend fun getProfileById(id: Int = 1): Profile?
 }

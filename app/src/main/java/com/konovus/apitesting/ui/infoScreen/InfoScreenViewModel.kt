@@ -1,14 +1,14 @@
 package com.konovus.apitesting.ui.infoScreen
 
+import android.util.Log
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.asLiveData
 import androidx.lifecycle.viewModelScope
 import com.konovus.apitesting.data.local.entities.*
-import com.konovus.apitesting.data.redux.AppState
-import com.konovus.apitesting.data.redux.Store
 import com.konovus.apitesting.data.repository.AlphaVantageRepository
 import com.konovus.apitesting.data.repository.IMainRepository
+import com.konovus.apitesting.util.Constants.TAG
 import com.konovus.apitesting.util.Constants.TEN_MINUTES
 import com.konovus.apitesting.util.Constants.TIME_SPANS
 import com.konovus.apitesting.util.Resource
@@ -24,18 +24,16 @@ class InfoScreenViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val alphaVantageRepository: AlphaVantageRepository,
     private val repository: IMainRepository,
-    private val store: Store<AppState>,
 ) : ViewModel() {
 
     private val symbol = savedStateHandle.get<String>("symbol")!!
 
-    val profile: Flow<Profile> = repository.getProfileFlow().map { profile ->
+    val profile: Flow<Profile> = repository.getProfileFlow().filterNotNull().map { profile ->
         stateFlow.update { it.copy(
             profile = profile,
             isFavorite = profile.favorites.contains(symbol)) }
         profile
     }
-//    val portfolio: Flow<Portfolio> = repository.getPortfolioFlow()
 
     private var stateFlow = MutableStateFlow(InfoScreenStates())
     val state = stateFlow.asLiveData()
@@ -65,12 +63,13 @@ class InfoScreenViewModel @Inject constructor(
         stateFlow.update { it.copy(chartLoading = true) }
         val chartDataResult = alphaVantageRepository.getChartData(symbol, TIME_SPANS[pos])
         processNetworkResult(chartDataResult) { chartData ->
-            repository.updateChartDataCache(symbol + TIME_SPANS[pos].first + TIME_SPANS[pos].second, chartData)
+            if (chartData.isEmpty()) return@processNetworkResult
             stateFlow.update { it.copy(
-                chartData = chartData.ifEmpty { null },
+                chartData = chartData,
                 chartLoading = false,
                 stock = getUpdatedStock(pos)
             ) }
+            repository.updateChartDataCache(symbol + TIME_SPANS[pos].first + TIME_SPANS[pos].second, chartData)
         }
     }
 
@@ -102,14 +101,12 @@ class InfoScreenViewModel @Inject constructor(
                         stateFlow.value.stock?.let { repository.updatePortfolioStocksCache(it.toQuote()) }
                     else repository.removeFromPortfolioStocksCache(symbol)
                     repository.updateProfile(profile = stateFlow.value.profile!!.copy(portfolio = updatedPortfolio))
+                Log.i(TAG, "onEvent: after transaction: ${repository.portfolioQuotesCache}")
             }
             is InfoScreenEvent.OnRetry -> initSetup()
             is InfoScreenEvent.OnFavorite -> {
                 viewModelScope.launch {
-//                    val updatedStock = event.stock.copy(isFavorite = !event.stock.isFavorite)
-
                     repository.updateProfile(stateFlow.value.profile!!.updateFavorites(symbol))
-//                    stateFlow.update { it.copy(isFavorite = !stateFlow.value.isFavorite) }
                     repository.updateFavoritesCacheQuote(event.stock.toQuote())
                 }
             }

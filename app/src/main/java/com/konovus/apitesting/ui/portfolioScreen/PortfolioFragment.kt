@@ -61,7 +61,7 @@ class PortfolioFragment: Fragment(R.layout.portfolio_fragment) {
         val initialAmount = portfolio.transactions.filter { it.symbol == quote.symbol }.filter { it.orderType == OrderType.Buy }
             .sumOf { it.amount }.minus(portfolio.transactions.filter { it.symbol == quote.symbol }
                 .filter { it.orderType == OrderType.Sell }.sumOf { it.amount })
-        val currentAmount = portfolio.stocksToShareAmount[quote.symbol]!! * quote.price.toDouble()
+        val currentAmount = (portfolio.stocksToShareAmount[quote.symbol]!! * quote.price.toDouble()).toNDecimals(2)
         val changeInPercent = ((currentAmount - initialAmount) / initialAmount * 100).toNDecimals(2)
         changePercentValue(changeInPercent)
         changePercent(changeInPercent.toString())

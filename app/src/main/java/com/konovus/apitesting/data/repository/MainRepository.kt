@@ -145,12 +145,12 @@ class MainRepository @Inject constructor(
 
     override suspend fun getPortfolio() = portfolioDao.getPortfolioById()
 
-    override fun getProfileFlow(): Flow<Profile> = profileDao.getProfileFlow()
+    override fun getProfileFlow(): Flow<Profile?> = profileDao.getProfileFlow()
 
     override suspend fun insertProfile(profile: Profile) = profileDao.insert(profile)
 
     override suspend fun updateProfile(profile: Profile) = profileDao.update(profile)
 
-    override suspend fun getProfile(): Profile? = profileDao.getProfile()
+    override suspend fun getProfileById(id: Int): Profile? = profileDao.getProfileById(id)
 
 }

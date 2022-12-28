@@ -6,6 +6,7 @@ import com.konovus.apitesting.data.local.entities.Portfolio
 import com.konovus.apitesting.data.local.models.Quote
 import com.konovus.apitesting.data.repository.IMainRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.map
 import javax.inject.Inject
 
@@ -14,12 +15,11 @@ class PortfolioViewModel @Inject constructor(
     private val repository: IMainRepository
 ) : ViewModel() {
 
-    val state = repository.getProfileFlow().map { profile ->
+    val state = repository.getProfileFlow().filterNotNull().map { profile ->
         PortfolioScreenState(
             portfolio = profile.portfolio,
             quotes = profile.portfolio.stocksToShareAmount.keys.mapNotNull { symbol ->
-                repository.portfolioQuotesCache.find { it.symbol == symbol } ?:
-                repository.getStock(symbol)?.toQuote()
+                repository.portfolioQuotesCache.find { it.symbol == symbol }
             })
     }.asLiveData()
 

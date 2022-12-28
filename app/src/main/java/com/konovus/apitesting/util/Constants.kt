@@ -4,7 +4,7 @@ object Constants {
     const val TAG = "ApiTesting"
     const val BASE_URL_ALPHA_VANTAGE = "https://www.alphavantage.co"
     const val BASE_URL_YH_FINANCE = "https://yh-finance.p.rapidapi.com/"
-    const val TEN_MINUTES = 10 * 60_000
+    const val TEN_MINUTES = 10 * 60_000L
 
     val TIME_SPANS: List<Pair<String, Int>> = listOf(
         Pair("TIME_SERIES_INTRADAY", 16),

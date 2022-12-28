@@ -24,9 +24,9 @@ import com.konovus.apitesting.util.Constants.TEN_MINUTES
 import com.konovus.apitesting.util.Constants.TIME_SPANS
 import com.konovus.apitesting.util.NetworkConnectionObserver
 import com.konovus.apitesting.util.NetworkStatus
+import com.konovus.apitesting.util.runAtInterval
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.delay
 import javax.inject.Inject
 
 
@@ -55,7 +55,7 @@ class MainFragment : Fragment(R.layout.main_fragment), FavoritesAdapter.OnItemCl
 
     private fun observeProfile() {
         viewModel.profile.observe(viewLifecycleOwner) {
-            Log.i(TAG, "observeProfile: $it")
+            if (it == null) return@observe
             binding.profile = it
             viewModel.updatePortfolio(it)
         }
@@ -63,7 +63,8 @@ class MainFragment : Fragment(R.layout.main_fragment), FavoritesAdapter.OnItemCl
 
     private fun observeNetworkConnectivity() {
         networkConnectionObserver.connection.observe(viewLifecycleOwner) {
-            if (it == NetworkStatus.Available || it == NetworkStatus.BackOnline) {
+            if (it == NetworkStatus.BackOnline) {
+                Log.i(TAG, "observeNetworkConnectivity: ")
                 binding.profile?.let { viewModel.updatePortfolio(it) }
                 viewModel.updateFavoritesQuotes()
                 viewModel.updateFavoritesChartData()
@@ -73,20 +74,16 @@ class MainFragment : Fragment(R.layout.main_fragment), FavoritesAdapter.OnItemCl
     }
 
     private fun keepDataUpdated() {
-        refreshData?.cancel()
-        refreshData = lifecycleScope.launchWhenStarted {
-                while (true) {
-                    viewModel.updateFavoritesQuotes()
-                    viewModel.updateFavoritesChartData()
-                    binding.profile?.let { viewModel.updatePortfolio(it) }
-                    delay(TEN_MINUTES.toLong())
-                }
-            }
+        runAtInterval(lifecycleScope, TEN_MINUTES) {
+            Log.i(TAG, "keepDataUpdated: ")
+            viewModel.updateFavoritesQuotes()
+            viewModel.updateFavoritesChartData()
+            binding.profile?.let { viewModel.updatePortfolio(it) }
+        }
     }
 
     private fun bindFavoritesData() {
         viewModel.favoritesState.distinctUntilChanged().observe(viewLifecycleOwner) {
-            Log.i(TAG, "bindFavoritesData: $it")
             setupVisibilityAndLoadingStates(it)
             viewModel.updateFavoritesQuotes()
             viewModel.updateFavoritesChartData()

@@ -18,8 +18,8 @@ interface ProfileDao {
     suspend fun update(profile: Profile)
 
     @Query("select * from profile")
-    fun getProfileFlow(): Flow<Profile>
+    fun getProfileFlow(): Flow<Profile?>
 
     @Query("select * from profile where :id = id")
-    suspend fun getProfile(id: Int = 1): Profile?
+    suspend fun getProfileById(id: Int = 1): Profile?
 }
