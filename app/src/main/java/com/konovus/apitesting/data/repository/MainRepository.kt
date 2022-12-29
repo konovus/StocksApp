@@ -6,11 +6,8 @@ import com.google.gson.JsonSyntaxException
 import com.google.gson.internal.LinkedTreeMap
 import com.google.gson.reflect.TypeToken
 import com.konovus.apitesting.data.api.YhFinanceApi
-import com.konovus.apitesting.data.local.dao.PortfolioDao
 import com.konovus.apitesting.data.local.dao.ProfileDao
-import com.konovus.apitesting.data.local.dao.StockDao
 import com.konovus.apitesting.data.local.entities.ChartData
-import com.konovus.apitesting.data.local.entities.Portfolio
 import com.konovus.apitesting.data.local.entities.Profile
 import com.konovus.apitesting.data.local.entities.Stock
 import com.konovus.apitesting.data.local.models.Quote
@@ -30,8 +27,6 @@ import javax.inject.Singleton
 
 @Singleton
 class MainRepository @Inject constructor(
-    private val stockDao: StockDao,
-    private val portfolioDao: PortfolioDao,
     private val yhFinanceApi: YhFinanceApi,
     private val profileDao: ProfileDao,
 ) : IMainRepository {
@@ -97,6 +92,8 @@ class MainRepository @Inject constructor(
                 val errorResponse: T? = gson.fromJson(response.errorBody()!!.charStream(), type)
                 return Resource.Error("Error ${response.code()}: $errorResponse")
             }
+            if (response.body().toString().contains("null"))
+                return Resource.Error("Response object contains null fields.")
             response.body()?.let {
                 Resource.Success(data = it)
             } ?: Resource.Error("Null response body, try again.")
@@ -128,22 +125,6 @@ class MainRepository @Inject constructor(
             yhFinanceApi.fetchMultipleQuotes(symbols)
         }
     }
-
-    override fun getFavoritesFlow(): Flow<List<Stock>> = stockDao.getAllFavoriteStocksFlow()
-
-    override fun getFavoritesNr(): Flow<Int> = stockDao.getTotalFavStocks()
-
-    override suspend fun insertStock(stock: Stock) = stockDao.insertStock(stock)
-
-    override suspend fun getStock(symbol: String): Stock? = stockDao.getStockBySymbol(symbol)
-
-    override suspend fun insertPortfolio(portfolio: Portfolio) = portfolioDao.insertPortfolio(portfolio)
-
-    override suspend fun updatePortfolio(portfolio: Portfolio) = portfolioDao.updatePortfolio(portfolio)
-
-    override fun getPortfolioFlow() = portfolioDao.getPortfolioFlow()
-
-    override suspend fun getPortfolio() = portfolioDao.getPortfolioById()
 
     override fun getProfileFlow(): Flow<Profile?> = profileDao.getProfileFlow()
 

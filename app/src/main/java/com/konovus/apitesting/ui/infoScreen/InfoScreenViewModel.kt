@@ -1,6 +1,5 @@
 package com.konovus.apitesting.ui.infoScreen
 
-import android.util.Log
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.asLiveData
@@ -8,7 +7,6 @@ import androidx.lifecycle.viewModelScope
 import com.konovus.apitesting.data.local.entities.*
 import com.konovus.apitesting.data.repository.AlphaVantageRepository
 import com.konovus.apitesting.data.repository.IMainRepository
-import com.konovus.apitesting.util.Constants.TAG
 import com.konovus.apitesting.util.Constants.TEN_MINUTES
 import com.konovus.apitesting.util.Constants.TIME_SPANS
 import com.konovus.apitesting.util.Resource
@@ -67,7 +65,7 @@ class InfoScreenViewModel @Inject constructor(
             stateFlow.update { it.copy(
                 chartData = chartData,
                 chartLoading = false,
-                stock = getUpdatedStock(pos)
+                stock = updateStockChartChange(pos)
             ) }
             repository.updateChartDataCache(symbol + TIME_SPANS[pos].first + TIME_SPANS[pos].second, chartData)
         }
@@ -77,12 +75,11 @@ class InfoScreenViewModel @Inject constructor(
         stateFlow.update { it.copy(isLoading = true) }
         val stockSummaryResult = repository.getStockSummary(symbol)
         processNetworkResult(stockSummaryResult) { stockResponse ->
-            //Todo check if stockResponse contains null  
-            repository.updateStocksCache(stockResponse.toStock())
             stateFlow.update { it.copy(
                 stock = stockResponse.toStock(),
                 isLoading = false
             ) }
+            repository.updateStocksCache(stockResponse.toStock())
         }
     }
 
@@ -101,7 +98,6 @@ class InfoScreenViewModel @Inject constructor(
                         stateFlow.value.stock?.let { repository.updatePortfolioStocksCache(it.toQuote()) }
                     else repository.removeFromPortfolioStocksCache(symbol)
                     repository.updateProfile(profile = stateFlow.value.profile!!.copy(portfolio = updatedPortfolio))
-                Log.i(TAG, "onEvent: after transaction: ${repository.portfolioQuotesCache}")
             }
             is InfoScreenEvent.OnRetry -> initSetup()
             is InfoScreenEvent.OnFavorite -> {
@@ -117,7 +113,7 @@ class InfoScreenViewModel @Inject constructor(
                     if (repository.chartDataCache.containsKey(key)) {
                         stateFlow.update { it.copy(
                             chartData = repository.chartDataCache[key],
-                            stock = getUpdatedStock(event.pos),
+                            stock = updateStockChartChange(event.pos),
                             chartLoading = false
                         ) }
                     } else getCurrentChartData(symbol, event.pos)
@@ -127,7 +123,7 @@ class InfoScreenViewModel @Inject constructor(
         }
     }
 
-    private fun getUpdatedStock(pos: Int): Stock? {
+    private fun updateStockChartChange(pos: Int): Stock? {
         if (pos == 0)
             return repository.stocksCache.find { it.symbol == symbol }
         val list = repository.chartDataCache[symbol + TIME_SPANS[pos].first + TIME_SPANS[pos].second]!!
@@ -143,7 +139,7 @@ class InfoScreenViewModel @Inject constructor(
         processBlock: suspend (T) -> Unit
     ) = viewModelScope.launch {
         when (result) {
-            is Resource.Success -> { result.data?.let { processBlock(it) } }
+            is Resource.Success -> processBlock(result.data!!)
             is Resource.Loading -> stateFlow.update { it.copy(isLoading = true) }
             is Resource.Error -> {
                 sendEvent(message = result.message.orEmpty())

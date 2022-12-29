@@ -1,6 +1,5 @@
 package com.konovus.apitesting.data.local.dao
 
-import com.konovus.apitesting.data.local.dao.StockDao
 import com.konovus.apitesting.data.local.entities.Stock
 import kotlinx.coroutines.flow.Flow
 

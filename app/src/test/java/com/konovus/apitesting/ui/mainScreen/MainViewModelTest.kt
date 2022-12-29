@@ -8,10 +8,6 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import app.cash.turbine.test
 import com.google.common.truth.Truth.assertThat
 import com.konovus.apitesting.data.api.FakeYhFinanceApi
-import com.konovus.apitesting.data.local.dao.PortfolioDao
-import com.konovus.apitesting.data.local.dao.StockDao
-import com.konovus.apitesting.data.local.db.PortfolioDatabase
-import com.konovus.apitesting.data.local.db.StockDatabase
 import com.konovus.apitesting.data.local.entities.Portfolio
 import com.konovus.apitesting.data.local.entities.Stock
 import com.konovus.apitesting.data.repository.FakeMainRepository

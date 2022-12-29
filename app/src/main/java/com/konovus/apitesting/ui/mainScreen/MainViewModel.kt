@@ -35,13 +35,6 @@ class MainViewModel @Inject constructor(
         profile
     }.asLiveData()
 
-//    val portfolio: LiveData<Portfolio> = repository.getPortfolioFlow().asLiveData()
-
-//    val favorites = repository.getFavoritesNr().flatMapLatest { count ->
-//            favoritesStateFlow.update { it.copy(hasFavorites = count > 0) }
-//            repository.getFavoritesFlow()
-//        }.distinctUntilChangedBy { list -> list.map { it.price } }.asLiveData()
-
     private val favoritesStateFlow = MutableStateFlow(FavoritesUiState())
     val favoritesState: LiveData<FavoritesUiState> = favoritesStateFlow.asLiveData()
 
@@ -70,6 +63,7 @@ class MainViewModel @Inject constructor(
         if (portfolio.stocksToShareAmount.isEmpty() ||
             (portfolio.lastUpdatedTime + TEN_MINUTES > System.currentTimeMillis() && repository.portfolioQuotesCache.isNotEmpty()))
             return@launch
+
         updatePortfolioStocksPrices(portfolio.stocksToShareAmount.keys.joinToString(","))
         val updatedBalance = repository.portfolioQuotesCache.sumOf {
             it.price.toDouble() * portfolio.stocksToShareAmount[it.symbol]!!
@@ -99,8 +93,8 @@ class MainViewModel @Inject constructor(
     fun updateFavoritesQuotes() = viewModelScope.launch {
         val quotesAreUpdated = repository.favoritesCache.isNotEmpty() &&
                 repository.favoritesCache.minOf { it.lastTimeUpdated } + TEN_MINUTES > System.currentTimeMillis()
-
         if (!favoritesStateFlow.value.hasFavorites || favoritesStateFlow.value.isFetchingQuotes || quotesAreUpdated) return@launch
+
         favoritesStateFlow.update { it.copy(isFetchingQuotes = true) }
         val responseMultipleQuotes = repository
             .fetchUpdatedQuotes(favoritesStateFlow.value.symbols.joinToString(","))
@@ -114,6 +108,7 @@ class MainViewModel @Inject constructor(
     fun updateFavoritesChartData() = viewModelScope.launch {
         if (!favoritesStateFlow.value.hasFavorites || repository.chartDataCache.isNotEmpty()
             || favoritesStateFlow.value.isFetchingChartData) return@launch
+
         favoritesStateFlow.update { it.copy(isFetchingChartData = true) }
         val responseChartData = repository
             .fetchMultipleChartsData(favoritesStateFlow.value.symbols.joinToString(","))
@@ -134,6 +129,7 @@ class MainViewModel @Inject constructor(
 
     fun getTrendingStocks() = viewModelScope.launch {
         if (_trendingStocks.value.isNotEmpty()) return@launch
+
         val response = repository.fetchTrendingStocks()
         processNetworkResult(response) { result ->
             val stocks = result.finance.result.first().quotes.map { it.toStock() }
@@ -149,9 +145,7 @@ class MainViewModel @Inject constructor(
     ) {
         viewModelScope.launch {
             when (result) {
-                is Resource.Success -> {
-                    processBlock(result.data!!)
-                }
+                is Resource.Success -> processBlock(result.data!!)
                 is Resource.Loading -> {}
                 is Resource.Error -> {
                     sendEvent(message = result.message.orEmpty())

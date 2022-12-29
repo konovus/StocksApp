@@ -1,7 +1,6 @@
 package com.konovus.apitesting.data.repository
 
 import com.google.gson.internal.LinkedTreeMap
-import com.konovus.apitesting.data.local.dao.StockDao
 import com.konovus.apitesting.data.local.entities.ChartData
 import com.konovus.apitesting.data.local.entities.Portfolio
 import com.konovus.apitesting.data.local.entities.Stock

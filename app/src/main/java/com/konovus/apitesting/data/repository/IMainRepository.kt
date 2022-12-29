@@ -2,7 +2,6 @@ package com.konovus.apitesting.data.repository
 
 import com.google.gson.internal.LinkedTreeMap
 import com.konovus.apitesting.data.local.entities.ChartData
-import com.konovus.apitesting.data.local.entities.Portfolio
 import com.konovus.apitesting.data.local.entities.Profile
 import com.konovus.apitesting.data.local.entities.Stock
 import com.konovus.apitesting.data.local.models.Quote
@@ -45,22 +44,6 @@ interface IMainRepository {
     suspend fun fetchTrendingStocks(): Resource<TrendingStocksResponse>
 
     suspend fun fetchUpdatedQuotes(symbols: String): Resource<MultipleQuotesResponse>
-
-    suspend fun updatePortfolio(portfolio: Portfolio)
-
-    fun getFavoritesFlow(): Flow<List<Stock>>
-
-    fun getFavoritesNr(): Flow<Int>
-
-    suspend fun insertStock(stock: Stock)
-
-    suspend fun getStock(symbol: String): Stock?
-
-    suspend fun insertPortfolio(portfolio: Portfolio)
-
-    fun getPortfolioFlow(): Flow<Portfolio>
-
-    suspend fun getPortfolio(): Portfolio?
 
     fun getProfileFlow(): Flow<Profile?>
 
